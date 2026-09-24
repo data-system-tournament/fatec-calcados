@@ -1,8 +1,3 @@
-"""
-Rotina diária de expiração:  python manage.py expirar_pontos
-Num sistema real, rodaria todo dia de madrugada (cron). As telas e a API também
-expiram os pontos do cliente na hora da consulta, então nada fica errado se ela atrasar.
-"""
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 

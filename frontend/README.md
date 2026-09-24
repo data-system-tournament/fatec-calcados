@@ -1,32 +1,32 @@
-# React + TypeScript + Vite
+# Frontend · FATECalçados
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite. Três abas: **PDV / Caixa**, **Dashboard** e **Ações**. Todos os dados vêm da API do Django.
 
-Currently, two official plugins are available:
+## Onde está cada coisa
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Arquivo | O que faz |
+|---|---|
+| `src/App.jsx` | Abas, vendas do caixa (incluindo a fila de vendas offline) e mensagens na tela |
+| `src/config.js` | Qual caixa este PDV é (`REGISTER_CODE`) e textos fixos |
+| `src/services/api.js` | Todas as chamadas à API. Converte os nomes da API (português) para os usados nas telas |
+| `src/pages/Pdv.jsx` + `src/pages/pdv/` | Caixa: busca de produto, carrinho, cliente por CPF, resgate de pontos, recibo |
+| `src/pages/Dashboard.jsx` | Dashboard gerencial com filtro de período |
+| `src/pages/Actions.jsx` | Ações do gestor: listas de clientes para contatar e mensagem sugerida |
+| `src/components/` | Peças reutilizadas: gráficos (Recharts), modal, ícones, mensagem |
+| `src/utils/format.js` | Formatação brasileira: dinheiro, CPF, datas |
 
-## React Compiler
+## Como o front fala com o back
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+O React chama `/api/...` e o Vite repassa para o Django (proxy em `vite.config.ts`).
+No Docker, `API_URL=http://backend:8000` aponta para o container do backend.
 
-## Expanding the Oxlint configuration
+## Comandos
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci          # instala as dependências (também no seu computador, para o editor entender o código)
+npm run lint    # oxlint
+npm run build   # confere os tipos e gera a versão de produção
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Depois de mudar o `package.json`, atualize também o container:
+`docker compose run --rm frontend npm ci`.

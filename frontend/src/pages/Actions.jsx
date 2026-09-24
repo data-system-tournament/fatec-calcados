@@ -1,29 +1,31 @@
+import { Check, Hourglass, TrendingUp, UserPlus, UserX } from "lucide-react";
 import { useState } from "react";
-import Icon from "../components/Icon";
-import { formatNumber } from "../utils/format";
-import ActionModal from "./actions/ActionModal";
+import Modal from "../components/Modal";
+import { formatNumber, plural } from "../utils/format";
 
-function Actions({ actions, onActionDone, automations, onToggleAutomation, today, registers }) {
-  const [openActionId, setOpenActionId] = useState(null);
-  const openAction = actions.find((a) => a.id === openActionId);
+function Actions({ actions, doneTypes, onDone, today, registers, notify }) {
+  const [openType, setOpenType] = useState(null);
+  const openAction = actions.find((a) => a.type === openType);
 
-  function finishAction(message) {
-    onActionDone(openActionId, message);
-    setOpenActionId(null);
+  function markDone(action) {
+    onDone(action.type);
+    setOpenType(null);
+    notify(`“${action.title}” marcada como feita`);
   }
 
   return (
     <div className="acts">
       <div className="act-list">
-        {actions.length === 0 && (
-          <div className="card act"><p>Nenhuma ação pendente.</p></div>
-        )}
+        {actions.length === 0 && <div className="card act"><p>Carregando ações...</p></div>}
 
         {actions.map((action) => (
-          <ActionCard key={action.id} action={action} onOpen={() => setOpenActionId(action.id)} />
+          <ActionCard
+            key={action.type}
+            action={action}
+            done={doneTypes.includes(action.type)}
+            onOpen={() => setOpenType(action.type)}
+          />
         ))}
-
-        <Automations automations={automations} onToggle={onToggleAutomation} />
       </div>
 
       <aside className="pulse">
@@ -46,11 +48,18 @@ function Actions({ actions, onActionDone, automations, onToggleAutomation, today
       </aside>
 
       {openAction && (
-        <ActionModal action={openAction} onDone={finishAction} onClose={() => setOpenActionId(null)} />
+        <ActionModal action={openAction} onDone={() => markDone(openAction)} onClose={() => setOpenType(null)} notify={notify} />
       )}
     </div>
   );
 }
+
+const ACTION_ICONS = {
+  sumindo: UserX,
+  vencendo: Hourglass,
+  subir: TrendingUp,
+  segunda_compra: UserPlus,
+};
 
 function registerStatus(register) {
   if (register.online) return "online";
@@ -58,54 +67,72 @@ function registerStatus(register) {
   return "offline";
 }
 
-function ActionCard({ action, onOpen }) {
+function ActionCard({ action, done, onOpen }) {
+  const count = action.clients.length;
+  const preview = action.clients.slice(0, 3).map((c) => c.name).join(", ");
+  const ActionIcon = ACTION_ICONS[action.type];
+
   let className = "card act";
-  if (action.done) className += " done";
-  else if (action.warn) className += " warn";
+  if (done) className += " done";
+  else if (count > 0) className += " warn";
 
   return (
     <div className={className}>
-      <div>
-        <h3>{action.title}</h3>
-        <p>{action.done ? action.doneText : action.sub}</p>
+      <div className="act-main">
+        <span className={`act-icon ${action.type}`}><ActionIcon size={28} /></span>
+        <div>
+          <h3>{action.title} <span className="count">{count}</span></h3>
+          <p>{action.description}</p>
+          {count > 0 && !done && (
+            <p>{preview}{count > 3 && ` e mais ${count - 3}`}</p>
+          )}
+        </div>
       </div>
 
-      {action.done ? (
-        <span className="check" aria-label="Concluído"><Icon name="check" size={14} /> Feito</span>
-      ) : (
-        <button className={action.warn ? "btn" : "btn dark"} onClick={onOpen}>{action.cta}</button>
-      )}
+      {done && <span className="check" aria-label="Concluído"><Check size={14} /> Feito</span>}
+      {!done && count > 0 && <button className="btn dark" onClick={onOpen}>Ver clientes</button>}
+      {!done && count === 0 && <span className="muted">Ninguém nesta lista hoje</span>}
     </div>
   );
 }
 
-// automations: { "Aniversário": true, "Carrinho": false, ... }
-function Automations({ automations, onToggle }) {
-  const names = Object.keys(automations);
+function ActionModal({ action, onDone, onClose, notify }) {
+  const [message, setMessage] = useState(action.message);
+  const count = action.clients.length;
+
+  async function copyMessage() {
+    try {
+      await navigator.clipboard.writeText(message);
+      notify("Mensagem copiada");
+    } catch {
+      notify("Não foi possível copiar. Selecione o texto e use Ctrl+C.");
+    }
+  }
+
+  const footer = (
+    <>
+      <button className="btn" onClick={copyMessage}>Copiar mensagem</button>
+      <button className="btn dark" onClick={onDone}>Marcar como feito</button>
+    </>
+  );
 
   return (
-    <div className="card autos">
-      <h2>Automações</h2>
-      {names.length === 0 && <p className="hint">Nenhuma automação configurada.</p>}
+    <Modal title={`${action.title} · ${count} ${plural(count, "cliente", "clientes")}`} onClose={onClose} footer={footer}>
+      <ul className="client-list">
+        {action.clients.map((client) => (
+          <li key={`${client.name}-${client.cpf}`}>
+            <span>{client.name}<small>{client.cpf}</small></span>
+            <span className="muted">{client.detail}</span>
+          </li>
+        ))}
+      </ul>
 
-      {names.map((name) => {
-        const active = automations[name];
-        return (
-          <div key={name} className="auto-row">
-            <span>{name}</span>
-            <button
-              className={active ? "toggle on" : "toggle"}
-              role="switch"
-              aria-checked={active}
-              aria-label={name}
-              onClick={() => onToggle(name)}
-            >
-              <span className="knob" />
-            </button>
-          </div>
-        );
-      })}
-    </div>
+      <label className="field">
+        Mensagem sugerida
+        <textarea rows="4" value={message} onChange={(e) => setMessage(e.target.value)} />
+      </label>
+      <p className="muted">O cadastro ainda não tem telefone: copie a mensagem e envie pelo canal da loja.</p>
+    </Modal>
   );
 }
 

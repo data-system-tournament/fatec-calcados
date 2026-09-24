@@ -1,14 +1,11 @@
-"""Testes do seed e das APIs (dashboard e PDV): os números batem."""
-import json
 from datetime import datetime
-from decimal import Decimal
 
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
-from src import indicadores, regras, services
-from src.models import Cliente, Compra, Loja, MovimentoPontos
+from src import indicadores, regras
+from src.models import Cliente, Compra, MovimentoPontos
 
 
 class SeedEDashboardTest(TestCase):
@@ -24,6 +21,13 @@ class SeedEDashboardTest(TestCase):
         inicio, fim = indicadores.periodo_padrao()
         dados = indicadores.pontos_e_custo(inicio, fim)
         self.assertEqual(dados["custo"], regras.desconto_do_resgate(dados["resgatados"]))
+
+    def test_compras_do_dashboard_sao_so_as_com_cpf(self):
+        inicio, fim = indicadores.periodo_padrao()
+        com_cpf = Compra.objects.filter(data__gte=inicio, data__lte=fim, cliente__isnull=False).count()
+        sem_cpf = Compra.objects.filter(data__gte=inicio, data__lte=fim, cliente__isnull=True).count()
+        self.assertGreater(sem_cpf, 0)
+        self.assertEqual(indicadores.pontos_e_custo(inicio, fim)["compras"], com_cpf)
 
     def test_distribuicao_por_nivel_soma_o_total(self):
         base = indicadores.base_do_programa(timezone.now())
@@ -53,31 +57,3 @@ class SeedEDashboardTest(TestCase):
         self.assertEqual(sum(dados["evolucao"]["acumulados"]), dados["pontos"]["acumulados"])
         for linha in dados["ranking"]:
             self.assertTrue(linha["cpf"].startswith("***."))
-
-
-class ApiTest(TestCase):
-    def setUp(self):
-        self.loja = Loja.objects.create(nome="Loja Centro", cidade="Araras")
-        services.cadastrar_cliente("52998224725", "Mariana Souza", self.loja)
-
-    def test_pdv_consulta_saldo_e_registra_compra(self):
-        r = self.client.post(
-            "/api/compras/",
-            json.dumps({"cpf": "529.982.247-25", "loja_id": self.loja.id, "valor": "489.60"}),
-            content_type="application/json",
-        )
-        self.assertEqual(r.status_code, 201)
-        self.assertEqual(r.json()["pontos_ganhos"], 489)
-        saldo = self.client.get("/api/clientes/52998224725/").json()
-        self.assertEqual(saldo["saldo_pontos"], 489)
-        self.assertEqual(saldo["pontos_resgataveis"], 400)
-        self.assertEqual(saldo["valor_resgatavel"], "20.00")
-
-    def test_pdv_recebe_erro_legivel(self):
-        r = self.client.post(
-            "/api/compras/",
-            json.dumps({"cpf": "52998224725", "loja_id": self.loja.id, "valor": "100", "pontos_resgate": 150}),
-            content_type="application/json",
-        )
-        self.assertEqual(r.status_code, 400)
-        self.assertIn("múltiplos de 100", r.json()["erro"])

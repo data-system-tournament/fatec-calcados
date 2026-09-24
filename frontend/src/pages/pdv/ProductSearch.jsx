@@ -1,20 +1,18 @@
 import { useState } from "react";
-import Icon from "../../components/Icon";
-import { formatMoney } from "../../utils/format";
+import { Search } from "lucide-react";
+import { formatMoney, normalizeText } from "../../utils/format";
 
 const MAX_RESULTS = 6;
 
 function searchProducts(products, query) {
-  const text = query.trim().toLowerCase();
+  const text = normalizeText(query.trim());
   if (!text) return [];
 
   return products
-    .filter((p) => p.name.toLowerCase().includes(text) || p.sku.includes(text))
+    .filter((p) => normalizeText(p.name).includes(text) || p.sku.includes(text))
     .slice(0, MAX_RESULTS);
 }
 
-// Campo de busca do caixa: aceita o código bipado ou parte do nome.
-// Setas escolhem o produto, Enter adiciona, Esc limpa.
 function ProductSearch({ products, onAdd, inputRef }) {
   const [query, setQuery] = useState("");
   const [highlighted, setHighlighted] = useState(0);
@@ -51,7 +49,7 @@ function ProductSearch({ products, onAdd, inputRef }) {
 
   return (
     <div className="search">
-      <Icon name="search" size={18} />
+      <Search size={18} className="ic" />
       <input
         ref={inputRef}
         value={query}
@@ -80,7 +78,7 @@ function ProductSearch({ products, onAdd, inputRef }) {
               className={index === highlighted ? "hi" : ""}
               onMouseEnter={() => setHighlighted(index)}
               onMouseDown={(event) => {
-                event.preventDefault(); // não tira o foco do campo
+                event.preventDefault();
                 addProduct(product);
               }}
             >

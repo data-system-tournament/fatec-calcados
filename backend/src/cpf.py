@@ -1,4 +1,3 @@
-"""Funções de CPF: limpar, validar os dígitos verificadores, formatar e gerar (para o seed)."""
 import random
 
 
@@ -6,8 +5,8 @@ def limpar(cpf) -> str:
     return "".join(c for c in str(cpf or "") if c.isdigit())
 
 
+# Feito com IA: dígito verificador do CPF (pesos 10..2 para o 1º dígito e 11..2 para o 2º).
 def _digito(numeros: list[int]) -> int:
-    # 1º dígito: pesos 10..2 sobre 9 números. 2º dígito: pesos 11..2 sobre 10 números.
     peso_inicial = len(numeros) + 1
     soma = sum(n * (peso_inicial - i) for i, n in enumerate(numeros))
     resto = (soma * 10) % 11
@@ -28,7 +27,6 @@ def formatar(cpf) -> str:
 
 
 def mascarar(cpf) -> str:
-    """Mostra só o miolo do CPF no dashboard (LGPD): ***.456.789-**"""
     c = limpar(cpf)
     return f"***.{c[3:6]}.{c[6:9]}-**" if len(c) == 11 else "***"
 

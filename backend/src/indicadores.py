@@ -1,10 +1,4 @@
-"""
-Consultas do dashboard gerencial. Cada função responde a um bloco pedido no desafio.
-
-Todas recebem o período (inicio, fim). O "retrato" da base (níveis, saldo em aberto)
-é tirado na data `fim`, para o gestor poder ver como o programa estava no passado.
-"""
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce, TruncMonth
@@ -17,7 +11,6 @@ Tipo = MovimentoPontos.Tipo
 
 
 def periodo_padrao():
-    """Últimos 12 meses, começando no dia 1º do mês."""
     fim = timezone.localtime()
     ano, mes = fim.year, fim.month - 11
     if mes <= 0:
@@ -27,16 +20,14 @@ def periodo_padrao():
 
 
 def periodo_de_datas(data_inicio, data_fim):
-    """Converte duas `date` num intervalo que cobre os dias inteiros."""
     inicio = timezone.make_aware(datetime.combine(data_inicio, time.min))
     fim = timezone.make_aware(datetime.combine(data_fim, time.max))
     return inicio, min(fim, timezone.localtime())
 
 
-# -------------------------------------------------------- base do programa
-
-def _pontos_12m_por_cliente(ref):
-    """Queryset de clientes com a soma de pontos acumulados nos 12 meses até `ref`."""
+# Feito com IA: soma, para cada cliente, os pontos acumulados nos 12 meses até `ref`
+# (Sum com filter numa única consulta, em vez de uma consulta por cliente).
+def pontos_12m_por_cliente(ref):
     return Cliente.objects.filter(cadastrado_em__lte=ref).annotate(
         p12=Coalesce(
             Sum(
@@ -54,7 +45,7 @@ def _pontos_12m_por_cliente(ref):
 
 def base_do_programa(ref):
     contagem = {codigo: 0 for codigo, *_ in regras.NIVEIS}
-    for p12 in _pontos_12m_por_cliente(ref).values_list("p12", flat=True):
+    for p12 in pontos_12m_por_cliente(ref).values_list("p12", flat=True):
         contagem[regras.nivel_por_pontos(p12)] += 1
     total = sum(contagem.values())
     niveis = [
@@ -70,8 +61,6 @@ def base_do_programa(ref):
     return {"total": total, "niveis": niveis}
 
 
-# ------------------------------------------------------ pontos e custo
-
 def pontos_e_custo(inicio, fim):
     periodo = MovimentoPontos.objects.filter(data__gte=inicio, data__lte=fim)
     somas = periodo.aggregate(
@@ -85,12 +74,11 @@ def pontos_e_custo(inicio, fim):
 
     compras = Compra.objects.filter(data__gte=inicio, data__lte=fim).aggregate(
         custo=Coalesce(Sum("desconto"), 0, output_field=Compra._meta.get_field("desconto")),
-        quantidade=Count("id"),
+        quantidade=Count("id", filter=Q(cliente__isnull=False)),
         com_resgate=Count("id", filter=Q(pontos_resgatados__gt=0)),
         faturamento=Coalesce(Sum("valor_pago"), 0, output_field=Compra._meta.get_field("valor_pago")),
     )
 
-    # Pontos que ainda estão na mão dos clientes = "dívida" do programa com eles.
     em_aberto = (
         MovimentoPontos.objects.filter(data__lte=fim).aggregate(t=Sum("pontos"))["t"] or 0
     )
@@ -112,12 +100,9 @@ def pontos_e_custo(inicio, fim):
     }
 
 
-# ---------------------------------------------------------------- ranking
-
 def ranking(inicio, fim, limite=10):
-    """Clientes que mais acumularam pontos no período."""
     clientes = (
-        _pontos_12m_por_cliente(fim)
+        pontos_12m_por_cliente(fim)
         .annotate(
             acumulado=Coalesce(
                 Sum(
@@ -152,8 +137,6 @@ def ranking(inicio, fim, limite=10):
     return linhas
 
 
-# ------------------------------------------------------ evolução mensal
-
 def _meses(inicio, fim):
     inicio, fim = timezone.localtime(inicio), timezone.localtime(fim)
     ano, mes = inicio.year, inicio.month
@@ -165,6 +148,7 @@ def _meses(inicio, fim):
 NOMES_MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
 
 
+# Feito com IA: agrupa movimentos e compras por mês (TruncMonth) e preenche os meses sem movimento com zero.
 def evolucao_mensal(inicio, fim):
     pontos = (
         MovimentoPontos.objects.filter(data__gte=inicio, data__lte=fim)

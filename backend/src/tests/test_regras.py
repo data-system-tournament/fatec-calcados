@@ -1,9 +1,3 @@
-"""
-Testes das regras do programa. Rode com:  python manage.py test
-
-Cada teste é uma frase do regulamento. Se alguém mudar uma regra sem querer,
-um destes quebra. Ótimo material para mostrar na banca.
-"""
 import random
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -14,7 +8,7 @@ from django.utils import timezone
 
 from src import cpf as cpf_utils
 from src import regras, services
-from src.models import Cliente, Loja, MovimentoPontos
+from src.models import Loja, MovimentoPontos
 
 Tipo = MovimentoPontos.Tipo
 
@@ -24,17 +18,13 @@ def momento(ano, mes, dia, hora=12):
 
 
 class RegrasPurasTest(TestCase):
-    """Funções de regras.py, sem banco de dados."""
-
     def test_bronze_um_ponto_por_real_sem_centavos(self):
         self.assertEqual(regras.calcular_pontos(Decimal("489.60"), regras.BRONZE), 489)
 
     def test_prata_bonus_de_10_porcento(self):
-        # 489 * 1,10 = 537,9 -> 537
         self.assertEqual(regras.calcular_pontos(Decimal("489.60"), regras.PRATA), 537)
 
     def test_ouro_bonus_de_20_porcento(self):
-        # 489 * 1,20 = 586,8 -> 586
         self.assertEqual(regras.calcular_pontos(Decimal("489.60"), regras.OURO), 586)
 
     def test_compra_abaixo_de_um_real_nao_gera_pontos(self):
@@ -80,7 +70,6 @@ class CompraTest(TestCase):
         return services.registrar_compra(self.cliente.cpf, self.loja, valor, resgate, data=quando)
 
     def assert_ledger_consistente(self):
-        """O saldo (soma do livro-razão) precisa bater com o que sobra nos lotes."""
         saldo = services.saldo(self.cliente)
         lotes = self.cliente.movimentos.filter(tipo=Tipo.ACUMULO).aggregate(t=Sum("restante"))["t"] or 0
         self.assertEqual(saldo, lotes)
@@ -94,16 +83,16 @@ class CompraTest(TestCase):
         self.assertEqual(services.saldo(self.cliente), 489)
 
     def test_bonus_usa_o_nivel_de_antes_da_compra(self):
-        self.comprar("900.00", momento(2025, 3, 1))           # 900 pts, ainda Bronze
-        compra = self.comprar("200.00", momento(2025, 3, 2))  # compra feita como Bronze
+        self.comprar("900.00", momento(2025, 3, 1))
+        compra = self.comprar("200.00", momento(2025, 3, 2))
         self.assertEqual(compra.nivel_na_compra, regras.BRONZE)
-        self.assertEqual(compra.pontos_ganhos, 200)            # sem bônus
+        self.assertEqual(compra.pontos_ganhos, 200)
         self.assertEqual(services.nivel_atual(self.cliente, momento(2025, 3, 3)), regras.PRATA)
         seguinte = self.comprar("100.00", momento(2025, 3, 4))
-        self.assertEqual(seguinte.pontos_ganhos, 110)          # agora com +10%
+        self.assertEqual(seguinte.pontos_ganhos, 110)
 
     def test_resgate_da_desconto_e_pontos_sao_sobre_o_valor_pago(self):
-        self.comprar("500.00", momento(2025, 3, 1))           # 500 pts
+        self.comprar("500.00", momento(2025, 3, 1))
         compra = self.comprar("200.00", momento(2025, 3, 5), resgate=300)
         self.assertEqual(compra.desconto, Decimal("15.00"))
         self.assertEqual(compra.valor_pago, Decimal("185.00"))
@@ -124,7 +113,7 @@ class CompraTest(TestCase):
     def test_desconto_nao_pode_passar_do_valor_da_compra(self):
         self.comprar("1000.00", momento(2025, 3, 1))
         with self.assertRaises(services.RegraViolada):
-            self.comprar("10.00", momento(2025, 3, 2), resgate=300)  # R$ 15 > R$ 10
+            self.comprar("10.00", momento(2025, 3, 2), resgate=300)
 
     def test_erro_nao_grava_nada(self):
         self.comprar("250.00", momento(2025, 3, 1))
@@ -139,8 +128,8 @@ class CompraTest(TestCase):
             services.registrar_compra("390.533.447-05", self.loja, "100.00")
 
     def test_resgate_consome_os_pontos_mais_antigos_primeiro(self):
-        self.comprar("300.00", momento(2025, 1, 10))   # lote antigo: 300
-        self.comprar("400.00", momento(2025, 6, 10))   # lote novo: 400
+        self.comprar("300.00", momento(2025, 1, 10))
+        self.comprar("400.00", momento(2025, 6, 10))
         self.comprar("100.00", momento(2025, 7, 1), resgate=200)
         antigo, novo, _ = self.cliente.movimentos.filter(tipo=Tipo.ACUMULO).order_by("data")
         self.assertEqual(antigo.restante, 100)
@@ -149,8 +138,7 @@ class CompraTest(TestCase):
 
     def test_pontos_expiram_em_12_meses_so_o_que_sobrou_do_lote(self):
         self.comprar("300.00", momento(2025, 1, 10))
-        self.comprar("100.00", momento(2025, 2, 1), resgate=200)  # usa 200 do lote de 300
-        # 1 dia depois do vencimento do primeiro lote
+        self.comprar("100.00", momento(2025, 2, 1), resgate=200)
         expirados = services.expirar_pontos(self.cliente, momento(2026, 1, 11))
         self.assertEqual(expirados, 100)
         exp = self.cliente.movimentos.get(tipo=Tipo.EXPIRACAO)
@@ -165,7 +153,7 @@ class CompraTest(TestCase):
         self.assertEqual(self.cliente.movimentos.filter(tipo=Tipo.EXPIRACAO).count(), 1)
 
     def test_resgatar_nao_rebaixa_o_nivel(self):
-        self.comprar("1200.00", momento(2025, 3, 1))  # Prata
+        self.comprar("1200.00", momento(2025, 3, 1))
         self.comprar("100.00", momento(2025, 3, 2), resgate=1000)
         self.assertEqual(services.nivel_atual(self.cliente, momento(2025, 3, 3)), regras.PRATA)
 

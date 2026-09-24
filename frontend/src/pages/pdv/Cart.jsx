@@ -1,13 +1,14 @@
+import { Trash2 } from "lucide-react";
 import { formatMoney } from "../../utils/format";
 
-// items: [{ sku, quantity, product: { name, price } }]
-function Cart({ items, selectedSku, onSelect, onChangeQuantity }) {
+function Cart({ items, selectedSku, onSelect, onChangeQuantity, onRemove }) {
   return (
     <div className="cart">
       <div className="cart-h">
         <span>Item</span>
         <span>Qtd</span>
         <span>Valor</span>
+        <span />
       </div>
 
       {items.length === 0 && (
@@ -25,7 +26,6 @@ function Cart({ items, selectedSku, onSelect, onChangeQuantity }) {
             <small>{formatMoney(item.product.price)} un.</small>
           </span>
 
-          {/* stopPropagation: clicar em +/− não seleciona a linha */}
           <span className="qty" onClick={(event) => event.stopPropagation()}>
             <button aria-label="Diminuir" onClick={() => onChangeQuantity(item.sku, -1)}>−</button>
             <b>{item.quantity}</b>
@@ -33,6 +33,18 @@ function Cart({ items, selectedSku, onSelect, onChangeQuantity }) {
           </span>
 
           <span className="val">{formatMoney(item.product.price * item.quantity)}</span>
+
+          <button
+            className="cart-remove"
+            aria-label={`Remover ${item.product.name}`}
+            title="Remover item"
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemove(item.sku);
+            }}
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       ))}
     </div>

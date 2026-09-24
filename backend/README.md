@@ -5,7 +5,8 @@ Desafio de Inovação Data System 2026. Backend em Django + PostgreSQL; as telas
 - **Dashboard gerencial (React)**: `http://127.0.0.1:5173/`
 - **Retaguarda (Django Admin)**: `http://127.0.0.1:8000/admin/`
 - **API do dashboard**: `/api/dashboard/?inicio=AAAA-MM-DD&fim=AAAA-MM-DD`
-- **API para o PDV**: `/api/clientes/<cpf>/` e `/api/compras/`
+- **API das ações do gestor**: `/api/acoes/` (clientes sumindo, pontos vencendo, perto de subir de nível, novos sem segunda compra)
+- **API do caixa (PDV)**: produtos, clientes e vendas (veja "E o PDV?")
 
 ## Como rodar (Docker)
 
@@ -15,7 +16,7 @@ Na raiz do repositório (onde está o `docker-compose.yml`):
 docker compose up -d --build
 
 docker compose exec backend python manage.py migrate
-docker compose exec backend python manage.py popular_dados      # 40 clientes, 420 compras, 18 meses de histórico
+docker compose exec backend python manage.py popular_dados      # 40 clientes, 16 produtos, ~525 vendas, 18 meses de histórico
 docker compose exec backend python manage.py test               # 31 testes das regras, telas e API
 docker compose exec backend python manage.py createsuperuser    # para entrar no /admin
 ```
@@ -41,8 +42,9 @@ Opções: `docker compose exec backend python manage.py popular_dados --clientes
 | `src/models.py` | Loja, Cliente, Compra e MovimentoPontos (o livro-razão de pontos). |
 | `src/services.py` | `registrar_compra`, `expirar_pontos`, `saldo`, `nivel_atual`. **Toda regra é aplicada aqui.** |
 | `src/indicadores.py` | As consultas de cada bloco do dashboard. |
+| `src/acoes.py` | As listas da aba Ações: quais clientes o gestor deveria contatar hoje. |
 | `src/views.py` | APIs (dashboard e PDV). Só chamam services e indicadores. |
-| `src/management/commands/popular_dados.py` | Seed: gera compras e passa cada uma pelo service. |
+| `src/management/commands/popular_dados.py` | Seed: gera lojas, caixas, produtos e vendas, passando cada venda pelo service. |
 | `src/tests/` | Um teste para cada regra. |
 
 ## Decisões que o regulamento deixou em aberto
@@ -58,34 +60,47 @@ Opções: `docker compose exec backend python manage.py popular_dados --clientes
 
 Cada ponto que entra ou sai é uma linha em `MovimentoPontos` (acúmulo, resgate ou expiração).
 O saldo é a soma dessas linhas. Isso garante que qualquer número do dashboard pode ser
-auditado até a compra que o gerou, e que dashboard, página do cliente e API nunca discordam.
+auditado até a compra que o gerou, e que dashboard, caixa e API nunca discordam.
 
 ## Por que os números do dashboard batem com as regras
 
-O seed não inventa pontos: ele inventa compras (cliente, loja, data, valor) e passa cada uma,
-em ordem cronológica, pelo mesmo `registrar_compra` que o PDV usaria. Os testes em
+O seed não inventa pontos: ele inventa vendas (cliente, loja, data, produtos) e passa cada uma,
+em ordem cronológica, pelo mesmo `registrar_venda` que o caixa usa. Os testes em
 `tests/test_telas.py` conferem, por exemplo, que custo = pontos resgatados × R$ 0,05 e que a
 soma do gráfico mensal é igual ao total do período.
 
 ## E o PDV?
 
-O PDV (como o USE) conversaria com o programa por dois endpoints:
+O caixa (tela "PDV / Caixa" do React) conversa com o programa por estes endpoints.
+Cada caixa se identifica por um código (`Caixa.codigo`); o `popular_dados` cria um por loja,
+por exemplo `araras-01`.
+
+| Método e rota | Para quê |
+|---|---|
+| `GET /api/produtos/?busca=tenis` | Catálogo (sem `busca`, devolve todos os ativos) |
+| `GET /api/clientes/<cpf>/` | Nome, nível, saldo e pontos que dá para usar |
+| `POST /api/clientes/` | Cadastro rápido no caixa: `{cpf, nome, caixa}` |
+| `POST /api/vendas/` | Registra a venda (com ou sem CPF, com ou sem resgate) |
 
 ```bash
-# 1. Cliente informa o CPF no caixa: consultar saldo e nível
-curl http://127.0.0.1:8000/api/clientes/52998224725/
-
-# 2. Ao finalizar a venda: registrar a compra (com ou sem resgate)
-curl -X POST http://127.0.0.1:8000/api/compras/ \
+curl -X POST http://127.0.0.1:8000/api/vendas/ \
   -H "Content-Type: application/json" \
-  -d '{"cpf": "52998224725", "loja_id": 1, "valor": "489.60", "pontos_resgate": 0}'
+  -d '{"id": "3f1c2d4e-0000-4000-8000-000000000001", "caixa": "araras-01", "cpf": "52998224725",
+       "itens": [{"sku": "7890001", "quantidade": 1}], "forma_pagamento": "PIX", "pontos_resgate": 0}'
 ```
 
 (Troque o CPF por um que exista no seu banco.)
 
-Pontos de evolução para um PDV real: autenticação do caixa por token, e o que fazer quando
-o caixa estiver sem internet (acumular pode ficar numa fila e sincronizar depois; resgatar
-offline é arriscado, porque o mesmo saldo poderia ser usado em duas lojas ao mesmo tempo).
+Três cuidados na venda:
+
+1. **O preço vem do banco**, nunca da tela: o caixa manda só código e quantidade.
+2. **O `id` é gerado no caixa** (UUID). Se a mesma venda chegar duas vezes (caixa que ficou
+   offline e reenviou), a segunda resposta é `200` com a venda já registrada, sem duplicar pontos.
+3. **A `data` pode vir do caixa**, para a venda feita offline contar no horário em que aconteceu.
+
+Pontos de evolução para um PDV real: autenticação do caixa por token, senha do gerente para
+descontos, e resgate offline (é arriscado: o mesmo saldo poderia ser usado em duas lojas ao
+mesmo tempo; hoje o resgate de uma venda offline só é validado quando ela sincroniza).
 
 ## Roteiro para a equipe entender o projeto antes da banca
 

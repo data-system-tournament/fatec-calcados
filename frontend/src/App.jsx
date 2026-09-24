@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
+import PeriodFilter from "./components/PeriodFilter";
 import Toast from "./components/Toast";
-import { LEVELS, REGISTER_NAME } from "./config";
+import { REGISTER_NAME, STORE_NAME } from "./config";
 import Actions from "./pages/Actions";
 import Dashboard from "./pages/Dashboard";
 import Pdv from "./pages/Pdv";
-import { currentTime, plural, todayLabel } from "./utils/format";
+import { useDashboard } from "./hooks/useDashboard";
+import { fetchActions, fetchProducts, sendSale } from "./services/api";
+import { plural, todayLabel } from "./utils/format";
 
 const TOAST_DURATION_MS = 2800;
 
@@ -12,29 +15,85 @@ function App() {
   const [tab, setTab] = useState("dashboard");
   const [online, setOnline] = useState(true);
   const [sales, setSales] = useState([]);
-  const [newClientsToday, setNewClientsToday] = useState(0);
+  const [products, setProducts] = useState([]);
   const [toast, setToast] = useState(null);
+  const [newClientsToday, setNewClientsToday] = useState(0);
 
-  // Tudo começa vazio: estes dados virão do backend.
-  const [products] = useState([]);
-  const [clients, setClients] = useState([]);
-  const [alerts, setAlerts] = useState([]);
+  const [period, setPeriod] = useState(null);
+  const dashboard = useDashboard(period, tab === "dashboard");
+
   const [actions, setActions] = useState([]);
-  const [automations, setAutomations] = useState({});
-  const [rfm] = useState({});
+  const [doneActions, setDoneActions] = useState([]);
 
-  // Esconde a mensagem depois de alguns segundos
+  function notify(message) {
+    setToast({ id: crypto.randomUUID(), message });
+  }
+
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(null), TOAST_DURATION_MS);
     return () => clearTimeout(timer);
   }, [toast]);
 
-  function notify(message) {
-    setToast({ id: crypto.randomUUID(), message });
+  function loadActions() {
+    fetchActions()
+      .then(setActions)
+      .catch((error) => notify(`Não foi possível carregar as ações: ${error.message}`));
+  }
+
+  useEffect(() => {
+    fetchProducts()
+      .then(setProducts)
+      .catch((error) => notify(`Não foi possível carregar os produtos: ${error.message}`));
+    loadActions();
+  }, []);
+
+  function openTab(id) {
+    setTab(id);
+    if (id === "actions") loadActions();
   }
 
   const pendingSales = sales.filter((sale) => !sale.synced).length;
+
+  // Feito com IA: online, envia a venda e usa os valores do backend; offline, guarda a venda
+  // com `synced: false` para enviar depois.
+  async function finishSale(sale) {
+    if (!online) {
+      const pendingSale = { ...sale, synced: false };
+      setSales([...sales, pendingSale]);
+      return pendingSale;
+    }
+
+    const result = await sendSale(sale);
+    const recorded = { ...sale, total: result.total, points: result.pointsEarned, synced: true };
+    setSales([...sales, recorded]);
+    return recorded;
+  }
+
+  // Feito com IA: ao reconectar, envia as vendas pendentes uma por uma; as que falharem continuam pendentes.
+  // O `id` de cada venda é gerado no caixa, então reenviar a mesma venda não duplica no backend.
+  async function syncPendingSales() {
+    let sent = 0;
+    const updated = [];
+    for (const sale of sales) {
+      if (sale.synced) {
+        updated.push(sale);
+        continue;
+      }
+      try {
+        const result = await sendSale(sale);
+        updated.push({ ...sale, total: result.total, points: result.pointsEarned, synced: true });
+        sent += 1;
+      } catch {
+        updated.push(sale);
+      }
+    }
+    setSales(updated);
+
+    const failed = pendingSales - sent;
+    if (failed > 0) notify(`${failed} ${plural(failed, "venda não sincronizou", "vendas não sincronizaram")}. Tente reconectar de novo.`);
+    else notify(`${sent} ${plural(sent, "venda sincronizada", "vendas sincronizadas")} com o painel`);
+  }
 
   function toggleOnline() {
     if (online) {
@@ -44,66 +103,35 @@ function App() {
     }
 
     setOnline(true);
-    if (pendingSales === 0) {
-      notify(`${REGISTER_NAME} online`);
-      return;
-    }
-    setSales(sales.map((sale) => ({ ...sale, synced: true })));
-    notify(`${pendingSales} ${plural(pendingSales, "venda sincronizada", "vendas sincronizadas")} com o painel`);
+    if (pendingSales === 0) notify(`${REGISTER_NAME} online`);
+    else syncPendingSales();
   }
 
-  function finishSale(sale) {
-    setSales([...sales, { ...sale, synced: online }]);
-
-    if (sale.clientCpf) {
-      setClients(clients.map((c) => (c.cpf === sale.clientCpf ? { ...c, points: c.points + sale.points } : c)));
-    }
-  }
-
-  function registerClient(client) {
-    setClients([...clients, client]);
+  function clientRegistered(client) {
     setNewClientsToday(newClientsToday + 1);
-    notify(`${client.name} cadastrado(a) no nível Bronze`);
+    notify(`${client.name} cadastrado(a) no nível ${client.level}`);
   }
 
-  function raiseAlert(text) {
-    const alert = { id: crypto.randomUUID(), register: REGISTER_NAME, text, time: currentTime(), checked: false };
-    setAlerts([alert, ...alerts]);
-    notify(`Alerta enviado ao antifraude: ${text}`);
+  function actionDone(type) {
+    setDoneActions([...doneActions, type]);
   }
 
-  function checkAlert(alert) {
-    setAlerts(alerts.map((a) => (a.id === alert.id ? { ...a, checked: true } : a)));
-    notify(`Alerta do ${alert.register} marcado como verificado`);
+  let pointsRedeemedToday = 0;
+  for (const sale of sales) {
+    if (sale.synced) pointsRedeemedToday += sale.pointsToRedeem;
   }
 
-  function finishAction(actionId, message) {
-    setActions(actions.map((a) => (a.id === actionId ? { ...a, done: true, doneText: message } : a)));
-    notify(message);
-  }
-
-  function toggleAutomation(name) {
-    const active = automations[name];
-    setAutomations({ ...automations, [name]: !active });
-    notify(`Automação “${name}” ${active ? "pausada" : "ativada"}`);
-  }
-
-  const clientsPerLevel = {};
-  for (const level of LEVELS) {
-    clientsPerLevel[level] = clients.filter((c) => c.level === level).length;
-  }
-
-  const openAlerts = alerts.filter((a) => !a.checked).length;
-  const openActions = actions.filter((a) => !a.done).length;
+  const openActions = actions.filter((a) => a.clients.length > 0 && !doneActions.includes(a.type)).length;
   const registers = [{ name: REGISTER_NAME, online, pending: pendingSales }];
 
   return (
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="mark">P</span>
-          <div><b>Passo Certo</b><small>Loja Centro</small></div>
+          <span className="mark">F</span>
+          <div><b>FATECalçados</b><small>{STORE_NAME}</small></div>
         </div>
+        <span className="topbar-date">{todayLabel()}</span>
         <div className={online ? "conn" : "conn off"}>
           <i className={online ? "led on" : "led off"} />
           <span>
@@ -117,38 +145,29 @@ function App() {
       <main className={tab === "pdv" ? "main is-pdv" : "main"}>
         <div className="tabs-row">
           <nav className="tabs" role="tablist">
-            <TabButton id="dashboard" currentTab={tab} onSelect={setTab}>
-              Dashboard {openAlerts > 0 && <span className="pill">{openAlerts}</span>}
-            </TabButton>
-            <TabButton id="actions" currentTab={tab} onSelect={setTab}>
-              Ações {openActions > 0 && <span className="count">{openActions}</span>}
-            </TabButton>
-            <TabButton id="pdv" currentTab={tab} onSelect={setTab}>
+            <TabButton id="pdv" currentTab={tab} onSelect={openTab}>
               PDV / Caixa {!online && <span className="pill warn">offline</span>}
             </TabButton>
+            <TabButton id="dashboard" currentTab={tab} onSelect={openTab}>Dashboard</TabButton>
+            <TabButton id="actions" currentTab={tab} onSelect={openTab}>
+              Ações {openActions > 0 && <span className="count">{openActions}</span>}
+            </TabButton>
           </nav>
-          {tab !== "pdv" && <span className="date">{todayLabel()}</span>}
+          {tab === "dashboard" && dashboard.data && (
+            <PeriodFilter key={dashboard.data.start + dashboard.data.end} data={dashboard.data} onChange={setPeriod} />
+          )}
         </div>
 
-        {tab === "dashboard" && (
-          <Dashboard
-            sales={sales}
-            alerts={alerts}
-            onCheckAlert={checkAlert}
-            clientsPerLevel={clientsPerLevel}
-            rfm={rfm}
-            notify={notify}
-          />
-        )}
+        {tab === "dashboard" && <Dashboard data={dashboard.data} error={dashboard.error} />}
 
         {tab === "actions" && (
           <Actions
             actions={actions}
-            onActionDone={finishAction}
-            automations={automations}
-            onToggleAutomation={toggleAutomation}
-            today={{ newClients: newClientsToday, pointsRedeemed: 0 }}
+            doneTypes={doneActions}
+            onDone={actionDone}
+            today={{ newClients: newClientsToday, pointsRedeemed: pointsRedeemedToday }}
             registers={registers}
+            notify={notify}
           />
         )}
 
@@ -158,19 +177,10 @@ function App() {
             onToggleOnline={toggleOnline}
             pending={pendingSales}
             products={products}
-            clients={clients}
-            onRegisterClient={registerClient}
+            onClientRegistered={clientRegistered}
             onFinishSale={finishSale}
-            onAlert={raiseAlert}
             notify={notify}
           />
-        )}
-
-        {tab !== "pdv" && (
-          <footer className="foot">
-            Em memória de [Nome] ·{" "}
-            <a href="#" onClick={(e) => { e.preventDefault(); notify("Página Sobre nós em construção"); }}>Sobre nós</a>
-          </footer>
         )}
       </main>
 

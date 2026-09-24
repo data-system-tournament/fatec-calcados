@@ -1,42 +1,68 @@
 import { useState } from "react";
-import { SIGNUP_BONUS_POINTS } from "../../config";
-import { formatCpf, formatNumber, onlyDigits } from "../../utils/format";
+import { fetchClient, registerClient } from "../../services/api";
+import { formatCpf, onlyDigits } from "../../utils/format";
 
-// Mostra o cliente da venda, ou o campo de CPF para identificar/cadastrar um.
-function ClientPanel({ client, clients, onSelect, onClear, onRegister }) {
+function ClientPanel({ client, onSelect, onClear, onRegistered }) {
   const [cpf, setCpf] = useState("");
+  const [found, setFound] = useState(null);
+  const [status, setStatus] = useState("typing");
+  const [error, setError] = useState("");
   const [newName, setNewName] = useState("");
 
   if (client) {
     function changeClient() {
       setCpf("");
+      setStatus("typing");
       onClear();
     }
 
     return (
       <div className="client card">
         <div className="client-top">
-          <small>Cliente · {client.cpf}</small>
+          <small>Cliente · {formatCpf(client.cpf)}</small>
           <button className="link" onClick={changeClient}>Trocar</button>
         </div>
         <div className="client-name">
           {client.name} <span className={`badge ${client.level.toLowerCase()}`}>{client.level}</span>
         </div>
-        <small>Saldo {formatNumber(client.points)} pts</small>
       </div>
     );
   }
 
-  const cpfComplete = onlyDigits(cpf).length === 11;
-  const found = clients.find((c) => onlyDigits(c.cpf) === onlyDigits(cpf));
+  async function handleCpfChange(event) {
+    const value = formatCpf(event.target.value);
+    setCpf(value);
+    setError("");
 
-  function handleKeyDown(event) {
-    if (event.key === "Enter" && found) onSelect(found.cpf);
+    if (onlyDigits(value).length < 11) {
+      setStatus("typing");
+      return;
+    }
+
+    setStatus("searching");
+    try {
+      const result = await fetchClient(onlyDigits(value));
+      setFound(result);
+      setStatus(result ? "found" : "notFound");
+    } catch (e) {
+      setError(e.message);
+      setStatus("typing");
+    }
   }
 
-  function registerClient() {
-    onRegister({ cpf, name: newName.trim(), level: "Bronze", points: SIGNUP_BONUS_POINTS });
-    setNewName("");
+  async function handleRegister() {
+    setError("");
+    try {
+      const newClient = await registerClient(onlyDigits(cpf), newName.trim());
+      setNewName("");
+      onRegistered(newClient);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  function handleKeyDown(event) {
+    if (event.key === "Enter" && status === "found") onSelect(found);
   }
 
   return (
@@ -47,28 +73,29 @@ function ClientPanel({ client, clients, onSelect, onClear, onRegister }) {
           inputMode="numeric"
           placeholder="000.000.000-00"
           value={cpf}
-          onChange={(e) => setCpf(formatCpf(e.target.value))}
+          onChange={handleCpfChange}
           onKeyDown={handleKeyDown}
         />
       </label>
 
-      {!cpfComplete && <small className="muted">Digite o CPF para identificar o cliente.</small>}
+      {status === "typing" && !error && <small className="muted">Digite o CPF para identificar o cliente.</small>}
+      {status === "searching" && <small className="muted">Procurando cliente...</small>}
 
-      {cpfComplete && found && (
-        <button className="btn dark sm" onClick={() => onSelect(found.cpf)}>
+      {status === "found" && (
+        <button className="btn dark sm" onClick={() => onSelect(found)}>
           Usar {found.name} ({found.level})
         </button>
       )}
 
-      {cpfComplete && !found && (
+      {status === "notFound" && (
         <div className="quick-reg">
-          <small>CPF sem cadastro. Cadastre agora e o cliente já ganha pontos.</small>
+          <small>CPF sem cadastro. Cadastre agora e o cliente já ganha pontos nesta compra.</small>
           <input placeholder="Nome do cliente" value={newName} onChange={(e) => setNewName(e.target.value)} />
-          <button className="btn dark sm" disabled={!newName.trim()} onClick={registerClient}>
-            Cadastrar (+{SIGNUP_BONUS_POINTS} pts)
-          </button>
+          <button className="btn dark sm" disabled={!newName.trim()} onClick={handleRegister}>Cadastrar</button>
         </div>
       )}
+
+      {error && <p className="err">{error}</p>}
     </div>
   );
 }

@@ -1,10 +1,3 @@
-"""
-Modelo de dados.
-
-Ideia central: NÃO existe um campo "saldo" no cliente.
-Todo ponto que entra ou sai vira uma linha em MovimentoPontos (um livro-razão).
-O saldo é sempre a soma desses movimentos, então dá para auditar qualquer número.
-"""
 import uuid
 
 from django.db import models
@@ -19,6 +12,13 @@ class Nivel(models.TextChoices):
     OURO = regras.OURO, "Ouro"
 
 
+class FormaPagamento(models.TextChoices):
+    PIX = "PIX", "Pix"
+    CREDITO = "CREDITO", "Crédito"
+    DEBITO = "DEBITO", "Débito"
+    DINHEIRO = "DINHEIRO", "Dinheiro"
+
+
 class Loja(models.Model):
     nome = models.CharField(max_length=80)
     cidade = models.CharField(max_length=80)
@@ -28,6 +28,31 @@ class Loja(models.Model):
 
     def __str__(self):
         return self.nome
+
+
+class Caixa(models.Model):
+    codigo = models.SlugField(max_length=40, unique=True, help_text="Ex.: araras-01")
+    nome = models.CharField(max_length=40, help_text="Ex.: Caixa 01")
+    loja = models.ForeignKey(Loja, on_delete=models.PROTECT, related_name="caixas")
+
+    class Meta:
+        ordering = ["loja__nome", "nome"]
+
+    def __str__(self):
+        return f"{self.nome} ({self.loja})"
+
+
+class Produto(models.Model):
+    sku = models.CharField("código", max_length=20, unique=True)
+    nome = models.CharField(max_length=120)
+    preco = models.DecimalField("preço", max_digits=10, decimal_places=2)
+    ativo = models.BooleanField(default=True, help_text="Produtos inativos não aparecem no caixa")
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return f"{self.nome} ({self.sku})"
 
 
 class Cliente(models.Model):
@@ -42,44 +67,47 @@ class Cliente(models.Model):
     def __str__(self):
         return self.nome
 
-    @property
-    def primeiro_nome(self):
-        return self.nome.split()[0]
-
 
 class Compra(models.Model):
-    """Uma venda identificada por CPF. Depois de criada, nunca é editada."""
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="compras")
+    cliente = models.ForeignKey(
+        Cliente, on_delete=models.PROTECT, related_name="compras", null=True, blank=True
+    )
     loja = models.ForeignKey(Loja, on_delete=models.PROTECT, related_name="compras")
+    caixa = models.ForeignKey(
+        Caixa, on_delete=models.PROTECT, related_name="compras", null=True, blank=True
+    )
+    forma_pagamento = models.CharField(max_length=10, choices=FormaPagamento.choices, blank=True)
     data = models.DateTimeField(db_index=True)
     valor_bruto = models.DecimalField(max_digits=10, decimal_places=2)
     pontos_resgatados = models.PositiveIntegerField(default=0)
     desconto = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     valor_pago = models.DecimalField(max_digits=10, decimal_places=2)
-    nivel_na_compra = models.CharField(max_length=10, choices=Nivel.choices)
+    nivel_na_compra = models.CharField(max_length=10, choices=Nivel.choices, blank=True)
     pontos_ganhos = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["-data"]
 
     def __str__(self):
-        return f"{self.cliente} em {self.data:%d/%m/%Y} (R$ {self.valor_pago})"
+        quem = self.cliente or "Venda sem CPF"
+        return f"{quem} em {self.data:%d/%m/%Y} (R$ {self.valor_pago})"
 
 
+class ItemCompra(models.Model):
+    compra = models.ForeignKey(Compra, on_delete=models.CASCADE, related_name="itens")
+    produto = models.ForeignKey(Produto, on_delete=models.PROTECT, related_name="itens_vendidos")
+    quantidade = models.PositiveIntegerField()
+    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.quantidade}x {self.produto.nome}"
+
+
+# Feito com IA: livro-razão de pontos. Não existe campo "saldo": o saldo é a soma dos movimentos.
+# ACUMULO (+) é um lote com validade; RESGATE (-) e EXPIRACAO (-) tiram pontos.
+# `restante` guarda quanto de cada lote ainda não foi usado nem expirou (resgate FIFO e expiração por lote).
 class MovimentoPontos(models.Model):
-    """
-    Livro-razão de pontos.
-      ACUMULO   -> pontos positivos, gerados por uma compra. É um "lote" com validade.
-      RESGATE   -> pontos negativos, usados como desconto numa compra.
-      EXPIRACAO -> pontos negativos, o que sobrou de um lote vencido.
-
-    O campo `restante` só vale para ACUMULO: quanto daquele lote ainda não foi
-    resgatado nem expirou. É ele que permite o resgate FIFO e a expiração por lote.
-    Invariante (testado): soma de `pontos` == soma de `restante` dos lotes.
-    """
-
     class Tipo(models.TextChoices):
         ACUMULO = "ACUMULO", "Acúmulo"
         RESGATE = "RESGATE", "Resgate"
@@ -103,3 +131,4 @@ class MovimentoPontos(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_display()} {self.pontos:+} ({self.cliente})"
+

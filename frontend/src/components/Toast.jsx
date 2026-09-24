@@ -1,9 +1,9 @@
-import Icon from "./Icon";
+import { Check } from "lucide-react";
 
 function Toast({ message }) {
   return (
     <div className="toast" role="status">
-      <Icon name="check" size={15} />
+      <Check size={15} className="ic" />
       {message}
     </div>
   );

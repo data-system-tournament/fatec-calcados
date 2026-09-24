@@ -1,28 +1,20 @@
-"""
-Serviços: é AQUI que as regras são aplicadas.
-
-Views, API, admin e o seed chamam estas funções, nunca criam Compra ou
-MovimentoPontos na mão. Assim a regra existe num lugar só, e um PDV no
-futuro chamaria exatamente as mesmas funções (via API).
-"""
+import uuid
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.utils import timezone
 
 from . import cpf as cpf_utils
 from . import regras
-from .models import Cliente, Compra, Loja, MovimentoPontos
+from .models import Caixa, Cliente, Compra, FormaPagamento, ItemCompra, Loja, MovimentoPontos, Produto
 
 Tipo = MovimentoPontos.Tipo
 
 
 class RegraViolada(Exception):
-    """Erro de regra de negócio, com mensagem pronta para mostrar ao usuário."""
+    pass
 
-
-# ---------------------------------------------------------------- consultas
 
 def saldo(cliente: Cliente, ate=None) -> int:
     movimentos = cliente.movimentos.all()
@@ -32,7 +24,6 @@ def saldo(cliente: Cliente, ate=None) -> int:
 
 
 def pontos_12m(cliente: Cliente, em=None) -> int:
-    """Pontos ACUMULADOS nos 12 meses anteriores a `em`. É o que define o nível."""
     em = em or timezone.now()
     return (
         cliente.movimentos.filter(
@@ -45,21 +36,6 @@ def pontos_12m(cliente: Cliente, em=None) -> int:
 def nivel_atual(cliente: Cliente, em=None) -> str:
     return regras.nivel_por_pontos(pontos_12m(cliente, em))
 
-
-def pontos_a_vencer(cliente: Cliente, dias=60, em=None):
-    """(total de pontos que vencem nos próximos `dias`, data do primeiro vencimento)."""
-    em = em or timezone.now()
-    lotes = cliente.movimentos.filter(
-        tipo=Tipo.ACUMULO,
-        restante__gt=0,
-        expira_em__gt=em,
-        expira_em__lte=em + timezone.timedelta(days=dias),
-    ).order_by("expira_em")
-    total = sum(l.restante for l in lotes)
-    return total, (lotes[0].expira_em if total else None)
-
-
-# ---------------------------------------------------------------- operações
 
 def cadastrar_cliente(cpf, nome, loja: Loja | None = None, data=None) -> Cliente:
     numero = cpf_utils.limpar(cpf)
@@ -74,14 +50,12 @@ def cadastrar_cliente(cpf, nome, loja: Loja | None = None, data=None) -> Cliente
     )
 
 
+# Feito com IA: zera os lotes vencidos e registra a EXPIRACAO na data em que o lote venceu.
+# select_for_update trava os lotes para duas consultas simultâneas não expirarem o mesmo lote duas vezes.
+@transaction.atomic
 def expirar_pontos(cliente: Cliente, ate=None) -> int:
-    """
-    Zera os lotes vencidos até `ate` e registra uma EXPIRACAO para cada um.
-    O movimento é datado no dia em que o lote venceu (e não no dia em que
-    rodamos a rotina), para o gráfico mensal ficar correto.
-    """
     ate = ate or timezone.now()
-    vencidos = cliente.movimentos.filter(
+    vencidos = cliente.movimentos.select_for_update().filter(
         tipo=Tipo.ACUMULO, restante__gt=0, expira_em__lte=ate
     ).order_by("expira_em", "id")
     total = 0
@@ -95,8 +69,8 @@ def expirar_pontos(cliente: Cliente, ate=None) -> int:
     return total
 
 
+# Feito com IA: resgate FIFO, tira os pontos dos lotes mais antigos primeiro.
 def _consumir_lotes(cliente: Cliente, pontos: int, em):
-    """Resgate FIFO: tira os pontos dos lotes mais antigos primeiro."""
     falta = pontos
     lotes = cliente.movimentos.filter(
         tipo=Tipo.ACUMULO, restante__gt=0, expira_em__gt=em
@@ -108,21 +82,17 @@ def _consumir_lotes(cliente: Cliente, pontos: int, em):
         falta -= usar
         if falta == 0:
             return
-    # Não deveria acontecer, porque o saldo foi checado antes.
     raise RegraViolada("Saldo de pontos insuficiente.")
 
 
+# Feito com IA: aplica as regras nesta ordem: expira vencidos -> valida o resgate ->
+# nível de ANTES da compra -> pontos sobre o valor pago -> grava compra, resgate e novo lote.
+# transaction.atomic: se qualquer passo falhar, nada é gravado.
 @transaction.atomic
-def registrar_compra(cpf, loja: Loja, valor_bruto, pontos_resgate: int = 0, data=None) -> Compra:
-    """
-    Registra uma compra identificada por CPF, aplicando TODAS as regras, nesta ordem:
-      1. expira os pontos vencidos do cliente;
-      2. valida o resgate (múltiplo de 100, saldo suficiente, desconto <= valor);
-      3. calcula o nível ANTES da compra;
-      4. calcula os pontos sobre o valor PAGO, com o bônus do nível;
-      5. grava a compra, o RESGATE (FIFO) e o novo lote de ACUMULO.
-    Se qualquer passo falhar, nada é gravado (transaction.atomic).
-    """
+def registrar_compra(
+    cpf, loja: Loja, valor_bruto, pontos_resgate: int = 0, data=None,
+    *, caixa: Caixa | None = None, forma_pagamento: str = "", id=None,
+) -> Compra:
     data = data or timezone.now()
     try:
         valor_bruto = Decimal(str(valor_bruto)).quantize(Decimal("0.01"))
@@ -131,7 +101,10 @@ def registrar_compra(cpf, loja: Loja, valor_bruto, pontos_resgate: int = 0, data
     if valor_bruto <= 0:
         raise RegraViolada("O valor da compra precisa ser maior que zero.")
 
-    pontos_resgate = int(pontos_resgate or 0)
+    try:
+        pontos_resgate = int(pontos_resgate or 0)
+    except (TypeError, ValueError):
+        raise RegraViolada("Quantidade de pontos para resgate inválida.")
 
     try:
         cliente = Cliente.objects.select_for_update().get(cpf=cpf_utils.limpar(cpf))
@@ -154,8 +127,11 @@ def registrar_compra(cpf, loja: Loja, valor_bruto, pontos_resgate: int = 0, data
     ganhos = regras.calcular_pontos(valor_pago, nivel)
 
     compra = Compra.objects.create(
+        id=id or uuid.uuid4(),
         cliente=cliente,
         loja=loja,
+        caixa=caixa,
+        forma_pagamento=forma_pagamento,
         data=data,
         valor_bruto=valor_bruto,
         pontos_resgatados=pontos_resgate,
@@ -183,3 +159,79 @@ def registrar_compra(cpf, loja: Loja, valor_bruto, pontos_resgate: int = 0, data
         )
 
     return compra
+
+
+def buscar_produtos(texto: str = ""):
+    produtos = Produto.objects.filter(ativo=True)
+    texto = (texto or "").strip()
+    if texto:
+        produtos = produtos.filter(Q(nome__icontains=texto) | Q(sku__startswith=texto))
+    return produtos
+
+
+def _itens_da_venda(itens):
+    if not itens:
+        raise RegraViolada("A venda precisa ter pelo menos um item.")
+
+    linhas = []
+    for item in itens:
+        try:
+            sku = str(item["sku"])
+            quantidade = int(item["quantidade"])
+        except (KeyError, TypeError, ValueError):
+            raise RegraViolada("Cada item precisa de sku e quantidade.")
+        if quantidade < 1:
+            raise RegraViolada("A quantidade de cada item precisa ser pelo menos 1.")
+
+        produto = Produto.objects.filter(sku=sku, ativo=True).first()
+        if produto is None:
+            raise RegraViolada(f"Produto {sku} não encontrado.")
+        linhas.append((produto, quantidade))
+    return linhas
+
+
+# Feito com IA: venda do caixa. O preço vem do banco (o caixa manda só sku e quantidade).
+# Se o mesmo `id` chegar de novo (venda offline reenviada), devolve a venda existente sem duplicar.
+@transaction.atomic
+def registrar_venda(
+    caixa: Caixa, itens, forma_pagamento: str, cpf=None, pontos_resgate: int = 0, data=None, id=None,
+):
+    if id is not None:
+        try:
+            id = uuid.UUID(str(id))
+        except ValueError:
+            raise RegraViolada("Identificador da venda inválido.")
+        existente = Compra.objects.filter(id=id).first()
+        if existente:
+            return existente, False
+
+    if forma_pagamento not in FormaPagamento.values:
+        raise RegraViolada("Forma de pagamento inválida.")
+
+    linhas = _itens_da_venda(itens)
+    valor_bruto = sum(produto.preco * quantidade for produto, quantidade in linhas)
+
+    if cpf:
+        compra = registrar_compra(
+            cpf, caixa.loja, valor_bruto, pontos_resgate, data,
+            caixa=caixa, forma_pagamento=forma_pagamento, id=id,
+        )
+    else:
+        if pontos_resgate:
+            raise RegraViolada("Para usar pontos, informe o CPF do cliente.")
+        compra = Compra.objects.create(
+            id=id or uuid.uuid4(),
+            loja=caixa.loja,
+            caixa=caixa,
+            forma_pagamento=forma_pagamento,
+            data=data or timezone.now(),
+            valor_bruto=valor_bruto,
+            valor_pago=valor_bruto,
+        )
+
+    ItemCompra.objects.bulk_create([
+        ItemCompra(compra=compra, produto=produto, quantidade=quantidade, preco_unitario=produto.preco)
+        for produto, quantidade in linhas
+    ])
+    return compra, True
+

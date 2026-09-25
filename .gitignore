@@ -1,2 +1,5 @@
 relatorio_*.csv
 relatorio_*.pdf
+
+# Backup local do banco
+backup-*.sql

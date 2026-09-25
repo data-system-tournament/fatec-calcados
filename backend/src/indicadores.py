@@ -1,11 +1,11 @@
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum
 from django.db.models.functions import Coalesce, TruncMonth
 from django.utils import timezone
 
 from . import regras
-from .models import Cliente, Compra, MovimentoPontos
+from .models import Cliente, Compra, FormaPagamento, ItemCompra, MovimentoPontos
 
 Tipo = MovimentoPontos.Tipo
 
@@ -126,6 +126,7 @@ def ranking(inicio, fim, limite=10):
         linhas.append(
             {
                 "posicao": posicao,
+                "id": c.id,
                 "nome": c.nome,
                 "cpf": c.cpf,
                 "nivel": nivel,
@@ -179,3 +180,124 @@ def evolucao_mensal(inicio, fim):
         serie["custo"].append(float(c["total"]) if c else 0)
         serie["clientes"].append(c["clientes"] if c else 0)
     return serie
+
+
+def _percentual(parte, total, casas=1):
+    return round(100 * float(parte) / float(total), casas) if total else 0
+
+
+# Feito com IA: recortes de vendas do dashboard. Contam TODAS as vendas do período (com e sem CPF),
+# ao contrário de `pontos_e_custo`, que só olha as compras com CPF.
+def resumo_de_vendas(inicio, fim):
+    vendas = Compra.objects.filter(data__gte=inicio, data__lte=fim).aggregate(
+        quantidade=Count("id"),
+        com_cpf=Count("id", filter=Q(cliente__isnull=False)),
+        faturamento=Coalesce(Sum("valor_pago"), 0, output_field=Compra._meta.get_field("valor_pago")),
+    )
+    faturamento = float(vendas["faturamento"])
+    return {
+        "quantidade": vendas["quantidade"],
+        "faturamento": faturamento,
+        "ticket_medio": round(faturamento / vendas["quantidade"], 2) if vendas["quantidade"] else 0,
+        "com_cpf": vendas["com_cpf"],
+        "percentual_com_cpf": _percentual(vendas["com_cpf"], vendas["quantidade"]),
+    }
+
+
+def _agrupar_vendas(inicio, fim, *campos):
+    return (
+        Compra.objects.filter(data__gte=inicio, data__lte=fim)
+        .values(*campos)
+        .annotate(
+            quantidade=Count("id"),
+            faturamento=Coalesce(Sum("valor_pago"), 0, output_field=Compra._meta.get_field("valor_pago")),
+        )
+        .order_by("-faturamento")
+    )
+
+
+# Feito com IA: cada loja tem o seu "Caixa 01", então o grupo é caixa + loja (só o nome juntaria todas as lojas).
+def vendas_por_caixa(inicio, fim):
+    grupos = list(_agrupar_vendas(inicio, fim, "caixa__nome", "caixa__loja__nome"))
+    total = sum(g["faturamento"] for g in grupos)
+    return [
+        {
+            "nome": f"{g['caixa__nome']} · {g['caixa__loja__nome']}" if g["caixa__nome"] else "Sem caixa",
+            "quantidade": g["quantidade"],
+            "faturamento": float(g["faturamento"]),
+            "percentual": _percentual(g["faturamento"], total),
+        }
+        for g in grupos
+    ]
+
+
+def vendas_por_pagamento(inicio, fim):
+    nomes = dict(FormaPagamento.choices)
+    grupos = list(_agrupar_vendas(inicio, fim, "forma_pagamento"))
+    total = sum(g["faturamento"] for g in grupos)
+    return [
+        {
+            "codigo": g["forma_pagamento"],
+            "nome": nomes.get(g["forma_pagamento"], "Não informado"),
+            "quantidade": g["quantidade"],
+            "faturamento": float(g["faturamento"]),
+            "percentual": _percentual(g["faturamento"], total),
+        }
+        for g in grupos
+    ]
+
+
+def produtos_mais_vendidos(inicio, fim, limite=5):
+    receita = ExpressionWrapper(F("quantidade") * F("preco_unitario"), output_field=DecimalField(max_digits=12, decimal_places=2))
+    linhas = (
+        ItemCompra.objects.filter(compra__data__gte=inicio, compra__data__lte=fim)
+        .values("produto__sku", "produto__nome")
+        .annotate(unidades=Sum("quantidade"), receita=Sum(receita))
+        .order_by("-unidades", "-receita", "produto__nome")[:limite]
+    )
+    return [
+        {"sku": l["produto__sku"], "nome": l["produto__nome"], "unidades": l["unidades"], "receita": float(l["receita"])}
+        for l in linhas
+    ]
+
+
+# Feito com IA: o resgate por nível usa `nivel_na_compra` (o nível de ANTES da compra, gravado na venda),
+# então mostra qual nível mais usa os pontos, mesmo que o cliente tenha mudado de nível depois.
+def resgate_por_nivel(inicio, fim):
+    grupos = {
+        g["nivel_na_compra"]: g
+        for g in Compra.objects.filter(data__gte=inicio, data__lte=fim, cliente__isnull=False)
+        .values("nivel_na_compra")
+        .annotate(
+            compras=Count("id"),
+            com_resgate=Count("id", filter=Q(pontos_resgatados__gt=0)),
+            pontos_resgatados=Coalesce(Sum("pontos_resgatados"), 0),
+            pontos_ganhos=Coalesce(Sum("pontos_ganhos"), 0),
+        )
+    }
+    linhas = []
+    for codigo, nome, _minimo, _bonus in regras.NIVEIS:
+        g = grupos.get(codigo, {})
+        compras = g.get("compras", 0)
+        com_resgate = g.get("com_resgate", 0)
+        linhas.append({
+            "codigo": codigo,
+            "nome": nome,
+            "compras": compras,
+            "compras_com_resgate": com_resgate,
+            "taxa_resgate": _percentual(com_resgate, compras),
+            "pontos_resgatados": g.get("pontos_resgatados", 0),
+            "pontos_ganhos": g.get("pontos_ganhos", 0),
+        })
+    return linhas
+
+
+# Feito com IA: pontos que vão vencer nos próximos `dias` dias, somando o que resta de cada lote válido.
+def pontos_a_vencer(ref, dias):
+    pontos = (
+        MovimentoPontos.objects.filter(
+            tipo=Tipo.ACUMULO, restante__gt=0, expira_em__gt=ref, expira_em__lte=ref + timedelta(days=dias)
+        ).aggregate(t=Sum("restante"))["t"]
+        or 0
+    )
+    return {"dias": dias, "pontos": pontos, "reais": float(regras.desconto_do_resgate(pontos))}

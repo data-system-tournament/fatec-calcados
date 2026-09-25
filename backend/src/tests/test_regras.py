@@ -27,6 +27,13 @@ class RegrasPurasTest(TestCase):
     def test_ouro_bonus_de_20_porcento(self):
         self.assertEqual(regras.calcular_pontos(Decimal("489.60"), regras.OURO), 586)
 
+    def test_faixa_de_pontos_de_cada_nivel(self):
+        self.assertEqual(regras.faixa_do_nivel(regras.BRONZE), (0, 1000))
+        self.assertEqual(regras.faixa_do_nivel(regras.PRATA), (1000, 5000))
+        self.assertEqual(regras.faixa_do_nivel(regras.OURO), (5000, None))
+        with self.assertRaises(ValueError):
+            regras.faixa_do_nivel("DIAMANTE")
+
     def test_compra_abaixo_de_um_real_nao_gera_pontos(self):
         self.assertEqual(regras.calcular_pontos(Decimal("0.99"), regras.OURO), 0)
 

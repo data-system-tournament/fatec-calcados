@@ -17,7 +17,7 @@ docker compose up -d --build
 
 docker compose exec backend python manage.py migrate
 docker compose exec backend python manage.py popular_dados      # 40 clientes, 16 produtos, ~525 vendas, 18 meses de histórico
-docker compose exec backend python manage.py test               # 31 testes das regras, telas e API
+docker compose exec backend python manage.py test               # 68 testes das regras, telas e API
 docker compose exec backend python manage.py createsuperuser    # para entrar no /admin
 ```
 
@@ -43,7 +43,8 @@ Opções: `docker compose exec backend python manage.py popular_dados --clientes
 | `src/services.py` | `registrar_compra`, `expirar_pontos`, `saldo`, `nivel_atual`. **Toda regra é aplicada aqui.** |
 | `src/indicadores.py` | As consultas de cada bloco do dashboard. |
 | `src/acoes.py` | As listas da aba Ações: quais clientes o gestor deveria contatar hoje. |
-| `src/views.py` | APIs (dashboard e PDV). Só chamam services e indicadores. |
+| `src/consultas.py` | Só leitura: lista e perfil de clientes, lista e detalhe de vendas (telas Clientes e Vendas). |
+| `src/views.py` | APIs (dashboard, PDV, clientes e vendas). Só chamam services, indicadores e consultas. |
 | `src/management/commands/popular_dados.py` | Seed: gera lojas, caixas, produtos e vendas, passando cada venda pelo service. |
 | `src/tests/` | Um teste para cada regra. |
 
@@ -79,8 +80,12 @@ por exemplo `araras-01`.
 |---|---|
 | `GET /api/produtos/?busca=tenis` | Catálogo (sem `busca`, devolve todos os ativos) |
 | `GET /api/clientes/<cpf>/` | Nome, nível, saldo e pontos que dá para usar |
+| `GET /api/clientes/?busca=&nivel=&pagina=` | Lista paginada de clientes (CPF mascarado; `nivel` = `BRONZE`, `PRATA` ou `OURO`) |
+| `GET /api/clientes/<id>/perfil/` | Perfil: progresso para o próximo nível, lotes a vencer, compras e extrato de pontos |
 | `POST /api/clientes/` | Cadastro rápido no caixa: `{cpf, nome, caixa}` |
 | `POST /api/vendas/` | Registra a venda (com ou sem CPF, com ou sem resgate) |
+| `GET /api/vendas/?inicio=&fim=&caixa=&pagamento=&pagina=` | Lista paginada de vendas, com o faturamento do filtro |
+| `GET /api/vendas/<uuid>/` | Detalhe da venda, com os itens |
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/vendas/ \

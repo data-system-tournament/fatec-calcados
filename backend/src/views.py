@@ -5,11 +5,11 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from . import cpf as cpf_utils
-from . import acoes, indicadores, regras, services
-from .models import Caixa, Cliente
+from . import acoes, consultas, indicadores, regras, services
+from .models import Caixa, Cliente, Compra
 
 
 ATALHOS = [("30 dias", 30), ("90 dias", 90), ("12 meses", 365)]
@@ -39,6 +39,13 @@ def _dados_dashboard(request):
         "atalhos": atalhos,
         "base": indicadores.base_do_programa(fim),
         "pontos": indicadores.pontos_e_custo(inicio, fim),
+        "vendas": {
+            **indicadores.resumo_de_vendas(inicio, fim),
+            "por_caixa": indicadores.vendas_por_caixa(inicio, fim),
+            "por_pagamento": indicadores.vendas_por_pagamento(inicio, fim),
+            "mais_vendidos": indicadores.produtos_mais_vendidos(inicio, fim),
+        },
+        "resgate_por_nivel": indicadores.resgate_por_nivel(inicio, fim),
         "ranking": indicadores.ranking(inicio, fim),
         "evolucao": indicadores.evolucao_mensal(inicio, fim),
     }
@@ -50,6 +57,7 @@ def api_dashboard(request):
     pontos = dados["pontos"]
     for campo in ("custo", "faturamento", "custo_sobre_faturamento", "em_aberto_reais"):
         pontos[campo] = float(pontos[campo])
+    pontos["a_vencer"] = indicadores.pontos_a_vencer(timezone.now(), acoes.DIAS_PARA_VENCER)
     for linha in dados["ranking"]:
         linha["cpf"] = cpf_utils.mascarar(linha["cpf"])
     return JsonResponse(dados)
@@ -135,9 +143,31 @@ def api_cliente(request, cpf):
     return JsonResponse(_cliente_json(cliente))
 
 
+def _pagina(request):
+    return request.GET.get("pagina", 1)
+
+
+@require_GET
+def api_cliente_perfil(request, cliente_id):
+    cliente = Cliente.objects.select_related("loja_cadastro").filter(id=cliente_id).first()
+    if cliente is None:
+        return _erro("Cliente não encontrado.", status=404)
+    return JsonResponse(consultas.perfil_do_cliente(cliente))
+
+
 @csrf_exempt
-@require_POST
-def api_cadastrar_cliente(request):
+@require_http_methods(["GET", "POST"])
+def api_clientes(request):
+    if request.method == "GET":
+        return JsonResponse(consultas.listar_clientes(
+            busca=request.GET.get("busca", ""),
+            nivel=request.GET.get("nivel", ""),
+            pagina=_pagina(request),
+        ))
+    return _cadastrar_cliente(request)
+
+
+def _cadastrar_cliente(request):
     try:
         dados = _ler_json(request)
         loja = _buscar_caixa(dados["caixa"]).loja if dados.get("caixa") else None
@@ -147,9 +177,36 @@ def api_cadastrar_cliente(request):
     return JsonResponse(_cliente_json(cliente), status=201)
 
 
+def _data_opcional(texto):
+    try:
+        return date.fromisoformat(texto)
+    except (TypeError, ValueError):
+        return None
+
+
+@require_GET
+def api_venda_detalhe(request, compra_id):
+    compra = Compra.objects.select_related("cliente", "loja", "caixa").filter(id=compra_id).first()
+    if compra is None:
+        return _erro("Venda não encontrada.", status=404)
+    return JsonResponse(consultas.detalhe_da_venda(compra))
+
+
 @csrf_exempt
-@require_POST
+@require_http_methods(["GET", "POST"])
 def api_vendas(request):
+    if request.method == "GET":
+        return JsonResponse(consultas.listar_vendas(
+            inicio=_data_opcional(request.GET.get("inicio")),
+            fim=_data_opcional(request.GET.get("fim")),
+            caixa=request.GET.get("caixa", ""),
+            pagamento=request.GET.get("pagamento", ""),
+            pagina=_pagina(request),
+        ))
+    return _registrar_venda(request)
+
+
+def _registrar_venda(request):
     try:
         dados = _ler_json(request)
         compra, nova = services.registrar_venda(

@@ -1,0 +1,260 @@
+@import "tailwindcss";
+
+/* Tokens de cor. As classes do Tailwind (bg-surface, text-ink, border-line...) apontam para
+   estas variáveis, então o modo escuro troca tudo sem precisar de classes dark:. */
+:root {
+  --bg: #F7F7F8;
+  --surface: #fff;
+  --subtle: #F4F4F5;
+  --ink: #18181B;
+  --ink-2: #3F3F46;
+  --muted: #71717A;
+  --faint: #A1A1AA;
+  --line: #E7E7EA;
+  --line-2: #D4D4D8;
+  --accent: #F2C12E;
+  --accent-ink: #8A6400;
+  --accent-soft: #FDF7E1;
+  --app: #3563E9;
+  --app-soft: #EAF0FE;
+  --ok: #15803D;
+  --ok-soft: #EAF6EE;
+  --danger: #D12C2C;
+  --danger-soft: #FDEEEE;
+  --violeta: #6D3FD9;
+  --violeta-soft: #F1EBFE;
+  --ciano: #0E7490;
+  --ciano-soft: #E4F5F9;
+  --bronze: #B87333;
+  --prata: #A1A1AA;
+  --shadow: 0 1px 2px rgba(24, 24, 27, .04);
+  --pop: 0 12px 32px rgba(24, 24, 27, .12), 0 2px 6px rgba(24, 24, 27, .06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1012;
+    --surface: #17181B;
+    --subtle: #1F2024;
+    --ink: #F4F4F5;
+    --ink-2: #D4D4D8;
+    --muted: #A1A1AA;
+    --faint: #71717A;
+    --line: #26272B;
+    --line-2: #3F3F46;
+    --accent-ink: #F2C12E;
+    --accent-soft: #2A2412;
+    --app: #7C9CFF;
+    --app-soft: #16203D;
+    --ok: #4ADE80;
+    --ok-soft: #12261A;
+    --danger: #F87171;
+    --danger-soft: #2C1515;
+    --violeta: #B39CFF;
+    --violeta-soft: #221B3D;
+    --ciano: #38C4E0;
+    --ciano-soft: #10262D;
+    --shadow: none;
+    --pop: 0 12px 32px rgba(0, 0, 0, .5);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0F1012;
+  --surface: #17181B;
+  --subtle: #1F2024;
+  --ink: #F4F4F5;
+  --ink-2: #D4D4D8;
+  --muted: #A1A1AA;
+  --faint: #71717A;
+  --line: #26272B;
+  --line-2: #3F3F46;
+  --accent-ink: #F2C12E;
+  --accent-soft: #2A2412;
+  --app: #7C9CFF;
+  --app-soft: #16203D;
+  --ok: #4ADE80;
+  --ok-soft: #12261A;
+  --danger: #F87171;
+  --danger-soft: #2C1515;
+  --violeta: #B39CFF;
+  --violeta-soft: #221B3D;
+  --ciano: #38C4E0;
+  --ciano-soft: #10262D;
+  --shadow: none;
+  --pop: 0 12px 32px rgba(0, 0, 0, .5);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-app: var(--app);
+  --color-app-soft: var(--app-soft);
+  --color-violeta: var(--violeta);
+  --color-violeta-soft: var(--violeta-soft);
+  --color-ciano: var(--ciano);
+  --color-ciano-soft: var(--ciano-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-bronze: var(--bronze);
+  --color-prata: var(--prata);
+  --shadow-card: var(--shadow);
+  --shadow-pop: var(--pop);
+}
+
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --animate-pop: pop .16s ease-out;
+  --animate-subir: subir .55s cubic-bezier(.16, 1, .3, 1) both;
+
+  /* Entrada do dashboard: os blocos sobem um pouco, em cascata (animation-delay em cada um). */
+  @keyframes subir {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+  }
+
+  @keyframes pop {
+    from {
+      transform: translateY(6px) scale(.99);
+      opacity: 0;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* O Tailwind v4 usa currentColor como cor padrão de borda; aqui volta a ser a linha do tema. */
+  *,
+  ::before,
+  ::after,
+  ::backdrop {
+    border-color: var(--color-line);
+  }
+
+  html {
+    scroll-padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font: 14px/1.5 var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "tnum" 1, "cv11" 1;
+  }
+
+  /* O Tailwind v4 tira a mãozinha dos botões; o app sempre usou. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-app);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Landing page (rota "/"). Paleta própria em preto e cinza, fixa: não segue o tema claro/escuro do app,
+   porque a página é a vitrine do programa e não uma tela de trabalho. */
+.landing {
+  --l-black: #0b0b0c;
+  --l-black-2: #151517;
+  --l-line-dark: #2a2a2e;
+  --l-text-dark: #a1a1a8;
+  --l-white: #fafafa;
+  --l-gray-1: #f1f1f2;
+  --l-gray-2: #e2e2e5;
+  --l-text-light: #63636b;
+  --l-ink: #0b0b0c;
+  /* Vinho: o único tom de cor. O escuro pinta fundos, o claro é para texto grande sobre preto. */
+  --l-vinho: #7d1a28;
+  --l-vinho-escuro: #3b0c14;
+  --l-vinho-claro: #e0485d;
+  background: var(--l-black);
+  color: var(--l-white);
+  font-size: 16px;
+  line-height: 1.6;
+  font-feature-settings: "cv11" 1, "ss01" 1;
+}
+
+.landing ::selection {
+  background: var(--l-white);
+  color: var(--l-black);
+}
+
+.landing a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* Único momento de movimento da página: o título do hero sobe uma vez ao carregar.
+   O estado final é o padrão, então sem animação (ou com movimento reduzido) nada fica escondido. */
+@keyframes landing-sobe {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+    filter: blur(6px);
+  }
+}
+
+.landing-sobe {
+  animation: landing-sobe .9s cubic-bezier(.16, 1, .3, 1) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-sobe {
+    animation: none;
+  }
+}
+
+/* Feito com IA: o brilho vinho do hero flutua devagar, num percurso pequeno e lento. Roda mesmo com
+   movimento reduzido porque é um fundo desfocado e sutil, sem nada que o visitante precise acompanhar. */
+@keyframes landing-flutua {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-60px, 50px) scale(1.08);
+  }
+  66% {
+    transform: translate(40px, 90px) scale(.95);
+  }
+}
+
+.landing-brilho {
+  animation: landing-flutua 14s ease-in-out infinite;
+}

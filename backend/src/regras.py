@@ -54,3 +54,13 @@ def proximo_nivel(pontos_12m: int):
             return nome, minimo - pontos_12m
     return None
 
+
+# Feito com IA: faixa de pontos (12 meses) que corresponde a um nível, para filtrar clientes por nível
+# no banco: `minimo <= pontos < limite` (limite None = sem teto, o último nível).
+def faixa_do_nivel(codigo: str):
+    for i, (c, _nome, minimo, _bonus) in enumerate(NIVEIS):
+        if c == codigo:
+            limite = NIVEIS[i + 1][2] if i + 1 < len(NIVEIS) else None
+            return minimo, limite
+    raise ValueError(f"Nível desconhecido: {codigo}")
+

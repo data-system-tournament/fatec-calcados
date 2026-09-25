@@ -45,6 +45,41 @@ class SeedEDashboardTest(TestCase):
         self.assertEqual(sum(serie["acumulados"]), resumo["acumulados"])
         self.assertEqual(sum(serie["resgatados"]), resumo["resgatados"])
 
+    def test_recortes_de_vendas_somam_o_faturamento_do_periodo(self):
+        vendas = self.client.get("/api/dashboard/").json()["vendas"]
+        self.assertGreater(vendas["quantidade"], 0)
+        self.assertGreater(len(vendas["por_caixa"]), 1)  # o seed tem várias lojas, cada uma com o seu "Caixa 01"
+        self.assertAlmostEqual(sum(c["faturamento"] for c in vendas["por_caixa"]), vendas["faturamento"], places=2)
+        self.assertAlmostEqual(sum(p["faturamento"] for p in vendas["por_pagamento"]), vendas["faturamento"], places=2)
+        self.assertEqual(sum(p["quantidade"] for p in vendas["por_pagamento"]), vendas["quantidade"])
+        self.assertAlmostEqual(vendas["ticket_medio"], vendas["faturamento"] / vendas["quantidade"], places=2)
+        self.assertLessEqual(vendas["com_cpf"], vendas["quantidade"])
+
+    def test_produtos_mais_vendidos_vem_em_ordem(self):
+        mais_vendidos = self.client.get("/api/dashboard/").json()["vendas"]["mais_vendidos"]
+        self.assertTrue(0 < len(mais_vendidos) <= 5)
+        unidades = [p["unidades"] for p in mais_vendidos]
+        self.assertEqual(unidades, sorted(unidades, reverse=True))
+
+    def test_resgate_por_nivel_bate_com_o_resumo_de_pontos(self):
+        dados = self.client.get("/api/dashboard/").json()
+        niveis = dados["resgate_por_nivel"]
+        self.assertEqual([n["codigo"] for n in niveis], [codigo for codigo, *_ in regras.NIVEIS])
+        self.assertEqual(sum(n["compras"] for n in niveis), dados["pontos"]["compras"])
+        self.assertEqual(sum(n["compras_com_resgate"] for n in niveis), dados["pontos"]["compras_com_resgate"])
+        self.assertEqual(sum(n["pontos_resgatados"] for n in niveis), dados["pontos"]["resgatados"])
+
+    def test_pontos_a_vencer_ficam_dentro_do_saldo_em_aberto(self):
+        pontos = self.client.get("/api/dashboard/").json()["pontos"]
+        a_vencer = pontos["a_vencer"]
+        self.assertEqual(a_vencer["dias"], 30)
+        self.assertLessEqual(a_vencer["pontos"], pontos["em_aberto"])
+        self.assertEqual(a_vencer["reais"], float(regras.desconto_do_resgate(a_vencer["pontos"])))
+
+    def test_ranking_traz_o_id_do_cliente_para_o_detalhe(self):
+        for linha in self.client.get("/api/dashboard/").json()["ranking"]:
+            self.assertEqual(self.client.get(f"/api/clientes/{linha['id']}/perfil/").status_code, 200)
+
     def test_api_do_dashboard_aceita_periodo_invalido(self):
         self.assertEqual(self.client.get("/api/dashboard/").status_code, 200)
         self.assertEqual(self.client.get("/api/dashboard/?inicio=lixo&fim=2026-06-30").status_code, 200)

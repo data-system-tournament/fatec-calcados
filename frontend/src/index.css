@@ -307,8 +307,9 @@
   text-underline-offset: 3px;
 }
 
-/* Landing page (rota "/"). Paleta própria em preto e cinza, fixa: não segue o tema claro/escuro do app,
-   porque a página é a vitrine do programa e não uma tela de trabalho. */
+/* Landing page (rota "/"). Paleta própria, fixa: não segue o tema claro/escuro do app, porque a página
+   é a vitrine do programa e não uma tela de trabalho. As cores de marca vêm da logo (public/fatec-icon.svg):
+   o vinho #8F0D0D e o cinza #B7B7B7. As seções alternam fundos (preto, osso, vinho, cinza) para dar ritmo. */
 .landing {
   --l-black: #0b0b0c;
   --l-black-2: #151517;
@@ -319,10 +320,15 @@
   --l-gray-2: #e2e2e5;
   --l-text-light: #63636b;
   --l-ink: #0b0b0c;
-  /* Vinho: o único tom de cor. O escuro pinta fundos, o claro é para texto grande sobre preto. */
-  --l-vinho: #7d1a28;
-  --l-vinho-escuro: #3b0c14;
-  --l-vinho-claro: #e0485d;
+  /* Vinho da logo. O escuro pinta o rodapé, o claro é para texto sobre preto e o rosa para texto sobre vinho. */
+  --l-vinho: #8f0d0d;
+  --l-vinho-escuro: #3d0505;
+  --l-vinho-claro: #f06262;
+  --l-rosa: #ffc4c4;
+  /* Cinza da logo e o osso (cinza quente bem claro) dos fundos claros. */
+  --l-cinza: #b7b7b7;
+  --l-cinza-texto: #3a3a3d;
+  --l-osso: #efede9;
   background: var(--l-black);
   color: var(--l-white);
   font-size: 16px;
@@ -347,7 +353,6 @@
   from {
     opacity: 0;
     transform: translateY(24px);
-    filter: blur(6px);
   }
 }
 
@@ -362,23 +367,104 @@
   }
 }
 
-/* Feito com IA: o brilho vinho do hero flutua devagar, num percurso pequeno e lento. Roda mesmo com
-   movimento reduzido porque é um fundo desfocado e sutil, sem nada que o visitante precise acompanhar. */
-@keyframes landing-flutua {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(-60px, 50px) scale(1.08);
-  }
-  66% {
-    transform: translate(40px, 90px) scale(.95);
+/* Feito com IA: vitrine do hero (VitrineTenis.tsx). O tênis que sai escorrega para a esquerda e some; o
+   que entra vem da direita, levemente girado, e assenta com ease-out exponencial. Entre a saída e a
+   entrada o fundo muda para a cor do estúdio da próxima foto (ver os tempos em VitrineTenis.tsx).
+   Só transform e opacity (nada de filter/blur), com will-change, para a animação rodar na GPU sem travar. */
+@keyframes landing-tenis-entra {
+  from {
+    opacity: 0;
+    transform: translate3d(18%, 0, 0) rotate(-8deg) scale(.95);
   }
 }
 
-.landing-brilho {
-  animation: landing-flutua 14s ease-in-out infinite;
+@keyframes landing-tenis-sai {
+  to {
+    opacity: 0;
+    transform: translate3d(-16%, 0, 0) rotate(6deg) scale(.96);
+  }
+}
+
+@keyframes landing-tenis-flutua {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -12px, 0);
+  }
+}
+
+@keyframes landing-legenda {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+}
+
+.landing-tenis-entra,
+.landing-tenis-sai,
+.landing-tenis-flutua {
+  will-change: transform, opacity;
+}
+
+.landing-tenis-entra {
+  animation: landing-tenis-entra .8s cubic-bezier(.16, 1, .3, 1) .65s both;
+}
+
+.landing-tenis-sai {
+  animation: landing-tenis-sai .3s cubic-bezier(.7, 0, .84, 0) both;
+}
+
+.landing-tenis-flutua {
+  animation: landing-tenis-flutua 6s ease-in-out infinite;
+}
+
+.landing-legenda {
+  animation: landing-legenda .5s cubic-bezier(.16, 1, .3, 1) .65s both;
+}
+
+/* Faixa de fotos que corre sozinha; para no hover/foco e, com movimento reduzido, vira rolagem manual. */
+@keyframes landing-faixa {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.landing-faixa {
+  will-change: transform;
+  animation: landing-faixa 70s linear infinite;
+}
+
+.landing-faixa-janela:hover .landing-faixa,
+.landing-faixa-janela:focus-within .landing-faixa {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-tenis-entra,
+  .landing-tenis-sai,
+  .landing-tenis-flutua,
+  .landing-legenda,
+  .landing-faixa {
+    animation: none;
+  }
+
+  .landing-tenis-sai {
+    opacity: 0;
+  }
+
+  .landing-faixa-janela {
+    overflow-x: auto;
+  }
+}
+
+:root[data-movimento="reduzido"] .landing-tenis-sai {
+  opacity: 0;
+}
+
+:root[data-movimento="reduzido"] .landing-faixa-janela {
+  overflow-x: auto;
 }
 
 /* Impressão / "Exportar PDF" do dashboard (pages/dashboard/exportPdf.ts). Feito com IA: a sidebar, o

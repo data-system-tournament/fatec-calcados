@@ -1,17 +1,22 @@
 import { ArrowRight, Layers, Plus, Star, ShieldCheck, ShoppingBag, Ticket, TrendingUp, type LucideIcon } from "lucide-react";
-import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
+import fotoLoja from "../../assets/loja/hero.jpg";
 import { useProgressoScroll } from "../../hooks/useProgressoScroll";
+import { container, titulo } from "./estilos";
+import { GALERIA, foto } from "./fotos";
+import VitrineTenis from "./VitrineTenis";
 
 // Feito com IA: todo número desta página espelha `backend/src/regras.py` (níveis, bônus, bloco de
 // resgate, validade). São texto de vitrine, não regra: se as regras mudarem, atualize aqui junto.
 
-const CARTAS: { titulo: string; texto: string; Icone: LucideIcon }[] = [
-  { titulo: "Compre", texto: "Cada real pago vira 1 ponto. Basta o CPF no caixa.", Icone: ShoppingBag },
-  { titulo: "Acumule", texto: "Cada compra gera um lote de pontos válido por 12 meses.", Icone: Layers },
-  { titulo: "Suba de nível", texto: "Prata soma +10% e Ouro +20% em cada compra.", Icone: TrendingUp },
-  { titulo: "Resgate", texto: "A cada 100 pontos, R$ 5,00 de desconto.", Icone: Ticket },
-  { titulo: "Sem cair", texto: "O nível conta o que você acumulou, não o saldo.", Icone: ShieldCheck },
+// Cada carta tem um fundo da paleta da logo (vinho, preto, branco, cinza), para a fileira não virar
+// cinco caixas iguais. `clara` diz se o texto vai claro sobre o fundo.
+const CARTAS: { titulo: string; texto: string; Icone: LucideIcon; fundo: string; clara: boolean }[] = [
+  { titulo: "Compre", texto: "Cada real pago vira 1 ponto. Basta o CPF no caixa.", Icone: ShoppingBag, fundo: "bg-(--l-vinho)", clara: true },
+  { titulo: "Acumule", texto: "Cada compra gera um lote de pontos válido por 12 meses.", Icone: Layers, fundo: "bg-(--l-ink)", clara: true },
+  { titulo: "Suba de nível", texto: "Prata soma +10% e Ouro +20% em cada compra.", Icone: TrendingUp, fundo: "bg-white", clara: false },
+  { titulo: "Resgate", texto: "A cada 100 pontos, R$ 5,00 de desconto.", Icone: Ticket, fundo: "bg-(--l-cinza)", clara: false },
+  { titulo: "Sem cair", texto: "O nível conta o que você acumulou, não o saldo.", Icone: ShieldCheck, fundo: "bg-(--l-vinho-escuro)", clara: true },
 ];
 
 const NIVEIS = [
@@ -20,15 +25,9 @@ const NIVEIS = [
   { nome: "Ouro", requisito: "5.000 pontos em 12 meses", bonus: "+20%" },
 ];
 
-// Texto que acende palavra por palavra no scroll. As palavras com * ficam em vinho.
+// Texto que acende palavra por palavra no scroll. As palavras com * ficam em rosa.
 const MANIFESTO =
   "Cada real vira ponto. Cada ponto vira desconto. E quem volta sempre *ganha* *mais* em cada compra.";
-
-const container = "mx-auto w-full max-w-[1120px] px-6 sm:px-10";
-const titulo = "text-[clamp(2.25rem,6vw,4rem)] leading-[1.02] font-semibold tracking-[-.035em] text-balance";
-const botao =
-  "inline-flex items-center gap-2 rounded-full bg-(--l-white) px-7 py-4 text-[15px] font-medium text-(--l-black) " +
-  "transition-[gap,background-color] duration-200 hover:gap-3 hover:bg-white";
 
 const limitar = (v: number) => Math.min(1, Math.max(0, v));
 const suavizar = (t: number) => 1 - Math.pow(1 - t, 3);
@@ -36,77 +35,31 @@ const suavizar = (t: number) => 1 - Math.pow(1 - t, 3);
 export default function Landing() {
   return (
     <div className="landing min-h-svh">
-      <header className="absolute inset-x-0 top-0 z-10">
-        <div className={`${container} flex h-24 items-center justify-between`}>
-          <Link to="/" className="text-[17px] font-semibold tracking-[-.02em]">
-            FATECalçados
-          </Link>
-          <nav className="flex items-center gap-6 text-[14px]">
-            <Link to="/dashboard" className="text-(--l-text-dark) transition-colors hover:text-(--l-white)">
-              Entrar
-            </Link>
-            <Link
-              to="/dashboard"
-              className="rounded-full border border-(--l-line-dark) px-4 py-2 font-medium transition-colors hover:border-(--l-vinho-claro)"
-            >
-              Criar conta
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <VitrineTenis topo={<Cabecalho />} />
 
       <main>
-        <section className="relative overflow-hidden pt-44 pb-28 sm:pt-60 sm:pb-40">
-          {/* Brilho vinho atrás do título, que flutua devagar (landing-brilho em index.css). */}
-          <div
-            aria-hidden
-            className="landing-brilho pointer-events-none absolute -top-40 right-[-10%] size-[720px] rounded-full bg-[radial-gradient(closest-side,rgba(125,26,40,.6),transparent)] blur-2xl"
-          />
-          <div className={`${container} relative`}>
-            <h1
-              className="landing-sobe max-w-[10ch] text-[clamp(3.25rem,11vw,6rem)] leading-[.96] font-semibold tracking-[-.04em] text-balance"
-              style={{ "--i": 0 } as CSSProperties}
-            >
-              Cada passo vira <span className="text-(--l-vinho-claro)">ponto.</span>
-            </h1>
-            <p
-              className="landing-sobe mt-8 max-w-[38ch] text-[clamp(1.05rem,1.6vw,1.25rem)] text-(--l-text-dark)"
-              style={{ "--i": 1 } as CSSProperties}
-            >
-              O programa de fidelidade da FATECalçados. Compre, acumule e troque por desconto.
-            </p>
-            <div className="landing-sobe mt-10 flex flex-wrap items-center gap-x-8 gap-y-4" style={{ "--i": 2 } as CSSProperties}>
-              <Link to="/pdv" className={botao}>
-                Abrir o PDV <ArrowRight size={18} aria-hidden />
-              </Link>
-              <a href="#como-funciona" className="text-[15px] text-(--l-text-dark) transition-colors hover:text-(--l-white)">
-                Como funciona
-              </a>
-            </div>
-          </div>
-        </section>
-
         <CartasNoScroll />
         <Manifesto />
+        <Galeria />
 
-        <section id="niveis" className="py-28 sm:py-40">
+        <section id="niveis" className="bg-(--l-cinza) py-28 text-(--l-ink) sm:py-40">
           <div className={container}>
             <h2 className={`${titulo} max-w-[14ch]`}>Quanto mais você compra, mais rende.</h2>
             <ul className="mt-20">
               {NIVEIS.map((n) => (
                 <li
                   key={n.nome}
-                  className="group grid items-baseline gap-x-8 gap-y-1 border-t border-(--l-line-dark) py-9 last:border-b sm:grid-cols-[1fr_1.4fr_auto] sm:py-12"
+                  className="group grid items-baseline gap-x-8 gap-y-1 border-t border-(--l-ink)/20 py-9 last:border-b sm:grid-cols-[1fr_1.4fr_auto] sm:py-12"
                 >
                   <h3 className="text-[clamp(1.75rem,4vw,2.75rem)] leading-none font-semibold tracking-[-.03em]">{n.nome}</h3>
-                  <p className="text-(--l-text-dark)">{n.requisito}</p>
-                  <p className="text-[clamp(1.75rem,4vw,2.75rem)] leading-none font-semibold tracking-[-.03em] tabular-nums transition-colors duration-300 group-hover:text-(--l-vinho-claro) sm:text-right">
+                  <p className="text-(--l-cinza-texto)">{n.requisito}</p>
+                  <p className="text-[clamp(1.75rem,4vw,2.75rem)] leading-none font-semibold tracking-[-.03em] tabular-nums transition-colors duration-300 group-hover:text-(--l-vinho) sm:text-right">
                     {n.bonus}
                   </p>
                 </li>
               ))}
             </ul>
-            <p className="mt-8 max-w-[52ch] text-[15px] text-(--l-text-dark)">
+            <p className="mt-8 max-w-[52ch] text-[15px] text-(--l-cinza-texto)">
               O bônus usa o nível de antes da compra, sobre o valor pago sem os centavos. No resgate, os pontos
               mais antigos são usados primeiro.
             </p>
@@ -115,41 +68,66 @@ export default function Landing() {
 
         <Avaliacoes />
         <Perguntas />
-
-        <section className="bg-(--l-vinho) py-28 sm:py-36">
-          <div className={container}>
-            <h2 className={`${titulo} max-w-[12ch]`}>Comece pelo caixa.</h2>
-            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
-              <Link to="/pdv" className={botao}>
-                Abrir o PDV <ArrowRight size={18} aria-hidden />
-              </Link>
-              <Link to="/dashboard" className="text-[15px] text-white/75 transition-colors hover:text-white">
-                Ver o dashboard
-              </Link>
-            </div>
-          </div>
-        </section>
+        <Chamada />
       </main>
 
-      <footer className="py-10">
-        <div className={`${container} flex flex-wrap items-center justify-between gap-4 text-[14px] text-(--l-text-dark)`}>
-          <span>FATECalçados</span>
-          <span>Desafio de Inovação Data System 2026</span>
+      <footer className="bg-(--l-vinho-escuro) py-10 text-(--l-rosa)">
+        <div className={`${container} flex flex-wrap items-center justify-between gap-4 text-[14px]`}>
+          <span className="flex items-center gap-3 font-medium text-white">
+            <Logo tamanho="size-8" />
+            FATECalçados
+          </span>
+          <span>Desafio de Inovação Data System 2026 · Fotos: Unsplash</span>
         </div>
       </footer>
     </div>
   );
 }
 
-function Carta({ titulo, texto, Icone }: (typeof CARTAS)[number]) {
+// A logo tem vinho e cinza, que somem em alguns fundos da vitrine; por isso ela fica sempre num selo branco.
+function Logo({ tamanho }: { tamanho: string }) {
   return (
-    <div className="flex h-full flex-col justify-between rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#232326,#141416)] p-6 shadow-[0_24px_48px_rgba(0,0,0,.45)]">
-      <span className="grid size-11 place-items-center rounded-xl bg-(--l-vinho-escuro) text-(--l-vinho-claro)">
+    <span className={`grid ${tamanho} flex-none place-items-center rounded-xl bg-white shadow-[0_6px_16px_-6px_rgb(0_0_0/.4)]`}>
+      <img src="/fatec-icon.svg" alt="" className="w-[72%]" />
+    </span>
+  );
+}
+
+function Cabecalho() {
+  return (
+    <header className="absolute inset-x-0 top-0 z-10">
+      <div className={`${container} flex h-24 items-center justify-between`}>
+        <Link to="/" aria-label="FATECalçados, início" className="flex items-center gap-3 text-[17px] font-semibold tracking-[-.02em]">
+          <Logo tamanho="size-10" />
+          <span className="hidden min-[440px]:inline">FATECalçados</span>
+        </Link>
+        <nav className="flex items-center gap-5 text-[14px] font-medium sm:gap-6">
+          <Link to="/login" className="underline-offset-4 hover:underline">
+            Entrar
+          </Link>
+          <Link
+            to="/cadastro"
+            className="rounded-full border border-(--h-tinta)/35 px-4 py-2 transition-colors hover:border-(--h-tinta)"
+          >
+            Criar conta
+          </Link>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function Carta({ titulo, texto, Icone, fundo, clara }: (typeof CARTAS)[number]) {
+  return (
+    <div
+      className={`flex h-full flex-col justify-between rounded-2xl p-6 shadow-[0_24px_40px_-16px_rgb(60_10_10/.35)] ${fundo} ${clara ? "text-white" : "text-(--l-ink)"}`}
+    >
+      <span className={`grid size-11 place-items-center rounded-xl ${clara ? "bg-white/12" : "bg-(--l-ink)/8"}`}>
         <Icone size={20} aria-hidden />
       </span>
       <div>
         <h3 className="text-xl font-semibold tracking-[-.02em]">{titulo}</h3>
-        <p className="mt-2 text-[14px] leading-snug text-(--l-text-dark)">{texto}</p>
+        <p className="mt-2 text-[14px] leading-snug opacity-85">{texto}</p>
       </div>
     </div>
   );
@@ -165,8 +143,8 @@ function CartasNoScroll() {
   const meio = (CARTAS.length - 1) / 2;
 
   return (
-    <>
-      <section id="como-funciona" ref={ref} className="relative hidden h-[260vh] lg:block">
+    <div id="como-funciona" className="bg-(--l-osso) text-(--l-ink)">
+      <section ref={ref} className="relative hidden h-[260vh] lg:block">
         <div className="sticky top-0 flex h-svh flex-col justify-center overflow-hidden">
           <div className={container}>
             <h2 className={`${titulo} max-w-[14ch]`}>Cinco regras. Nenhuma surpresa.</h2>
@@ -208,11 +186,11 @@ function CartasNoScroll() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }
 
-// Feito com IA: texto grande em cinza que acende palavra por palavra enquanto a seção passa presa na tela.
+// Feito com IA: texto grande que acende palavra por palavra enquanto a seção passa presa na tela.
 // Só muda opacidade, nada se move, então roda mesmo com movimento reduzido.
 function Manifesto() {
   const [ref, progresso] = useProgressoScroll<HTMLElement>({ respeitarMovimentoReduzido: false });
@@ -220,7 +198,7 @@ function Manifesto() {
   const avanco = limitar((progresso - 0.05) / 0.8) * palavras.length;
 
   return (
-    <section ref={ref} className="relative h-[220vh]">
+    <section ref={ref} className="relative h-[220vh] bg-(--l-vinho)">
       <div className="sticky top-0 flex h-svh items-center">
         <p className={`${container} text-[clamp(2.25rem,6.5vw,5rem)] leading-[1.05] font-semibold tracking-[-.035em]`}>
           {palavras.map((bruta, i) => {
@@ -230,14 +208,56 @@ function Manifesto() {
             return (
               <span
                 key={i}
-                className={destaque ? "text-(--l-vinho-claro)" : "text-(--l-white)"}
-                style={{ opacity: 0.16 + 0.84 * luz, transition: "opacity .15s linear" }}
+                className={destaque ? "text-(--l-rosa)" : "text-white"}
+                style={{ opacity: 0.22 + 0.78 * luz, transition: "opacity .15s linear" }}
               >
                 {palavra}{" "}
               </span>
             );
           })}
         </p>
+      </div>
+    </section>
+  );
+}
+
+// Feito com IA: faixa de fotos que corre devagar da direita para a esquerda. A lista aparece duas vezes
+// (a segunda escondida dos leitores de tela) e a animação anda metade da largura, então o loop não tem
+// emenda. Para no hover e, com movimento reduzido, fica parada e rola com o mouse ou o teclado.
+function Galeria() {
+  const fotos = (copia: boolean) =>
+    GALERIA.map((g, i) => (
+      <li key={`${copia}-${g.id}`} className={i % 2 ? "pt-14" : ""}>
+        <img
+          src={foto(g.id, 640)}
+          alt={copia ? "" : g.alt}
+          loading="lazy"
+          className="h-[clamp(260px,32vw,420px)] w-auto max-w-none rounded-2xl object-cover [aspect-ratio:3/4]"
+        />
+      </li>
+    ));
+
+  return (
+    <section className="bg-(--l-black) py-28 sm:py-40">
+      <div className={`${container} flex flex-wrap items-end justify-between gap-6`}>
+        <h2 className={`${titulo} max-w-[12ch]`}>Da quadra à calçada.</h2>
+        <p className="max-w-[36ch] text-(--l-text-dark)">
+          Corrida, casual, basquete, social. Todo par que passa no caixa conta ponto, do tênis do treino ao
+          sapato do trabalho.
+        </p>
+      </div>
+      <div
+        className="landing-faixa-janela mt-16 overflow-hidden"
+        tabIndex={0}
+        role="region"
+        aria-label="Fotos de tênis"
+      >
+        <div className="landing-faixa flex w-max">
+          <ul className="flex gap-4 pr-4">{fotos(false)}</ul>
+          <ul className="flex gap-4 pr-4" aria-hidden>
+            {fotos(true)}
+          </ul>
+        </div>
       </div>
     </section>
   );
@@ -280,11 +300,11 @@ const AVALIACOES = [
 
 function Avaliacoes() {
   return (
-    <section className="border-t border-(--l-line-dark) py-28 sm:py-40">
+    <section className="bg-(--l-osso) py-28 text-(--l-ink) sm:py-40">
       <div className={container}>
         <div className="flex flex-wrap items-end justify-between gap-6">
           <h2 className={`${titulo} max-w-[13ch]`}>Quem compra, volta.</h2>
-          <p className="max-w-[34ch] text-[14px] text-(--l-text-dark)">
+          <p className="max-w-[34ch] text-[14px] text-(--l-cinza-texto)">
             Avaliações simuladas, criadas para demonstrar o programa. Não são de clientes reais.
           </p>
         </div>
@@ -292,9 +312,9 @@ function Avaliacoes() {
           {AVALIACOES.map((a) => (
             <li
               key={a.nome}
-              className="mb-4 break-inside-avoid rounded-2xl border border-white/8 bg-(--l-black-2) p-7 transition-colors duration-300 hover:border-(--l-vinho)"
+              className="mb-4 break-inside-avoid rounded-2xl bg-white p-7 shadow-[0_10px_30px_-14px_rgb(60_10_10/.25)] transition-shadow duration-300 hover:shadow-[0_22px_44px_-16px_rgb(60_10_10/.35)]"
             >
-              <div className="flex gap-1 text-(--l-vinho-claro)" aria-label="5 de 5 estrelas">
+              <div className="flex gap-1 text-(--l-vinho)" aria-label="5 de 5 estrelas">
                 {Array.from({ length: 5 }, (_, i) => (
                   <Star key={i} size={15} fill="currentColor" strokeWidth={0} aria-hidden />
                 ))}
@@ -302,7 +322,7 @@ function Avaliacoes() {
               <p className="mt-5 text-[16px] leading-relaxed">“{a.texto}”</p>
               <p className="mt-6 flex items-center justify-between text-[14px]">
                 <span className="font-medium">{a.nome}</span>
-                <span className="rounded-full border border-(--l-line-dark) px-2.5 py-0.5 text-[12px] text-(--l-text-dark)">
+                <span className="rounded-full bg-(--l-osso) px-2.5 py-0.5 text-[12px] text-(--l-cinza-texto)">
                   Cliente {a.nivel}
                 </span>
               </p>
@@ -325,7 +345,7 @@ const PERGUNTAS = [
 
 function Perguntas() {
   return (
-    <section className="py-28 sm:py-40">
+    <section className="bg-(--l-black) py-28 sm:py-40">
       <div className={`${container} grid gap-14 lg:grid-cols-[5fr_7fr]`}>
         <h2 className={`${titulo} max-w-[10ch]`}>Perguntas frequentes.</h2>
         <div className="border-b border-(--l-line-dark)">
@@ -340,6 +360,42 @@ function Perguntas() {
           ))}
         </div>
       </div>
+    </section>
+  );
+}
+
+// Fechamento com a foto da loja (assets/loja/hero.jpg): o cinza e o vinho do tênis são os da logo. No
+// desktop a foto ocupa a direita e se funde ao fundo osso num degradê; no celular vem embaixo do texto.
+function Chamada() {
+  return (
+    <section className="relative overflow-hidden bg-(--l-osso) pt-28 text-(--l-ink) lg:py-48">
+      <div
+        aria-hidden
+        className="absolute inset-y-0 left-[38%] z-[1] hidden w-[18%] bg-[linear-gradient(90deg,var(--l-osso),transparent)] lg:block"
+      />
+      <div className={`${container} relative z-10`}>
+        <h2 className={`${titulo} max-w-[12ch]`}>Comece pelo caixa.</h2>
+        <p className="mt-6 max-w-[34ch] text-[17px] text-(--l-cinza-texto)">
+          O cadastro sai na primeira compra, só com o CPF. Os pontos já entram na mesma compra.
+        </p>
+        <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+          <Link
+            to="/pdv"
+            className="inline-flex items-center gap-2 rounded-full bg-(--l-vinho) px-7 py-4 text-[15px] font-semibold text-white shadow-[0_12px_28px_-10px_rgb(143_13_13/.6)] transition-[gap,background-color] duration-200 hover:gap-3 hover:bg-[#a31212]"
+          >
+            Abrir o PDV <ArrowRight size={18} aria-hidden />
+          </Link>
+          <Link to="/dashboard" className="text-[15px] font-medium underline-offset-4 hover:underline">
+            Ver o dashboard
+          </Link>
+        </div>
+      </div>
+      <img
+        src={fotoLoja}
+        alt="Par de tênis cinza com detalhes vinho sobre blocos de concreto claro"
+        loading="lazy"
+        className="mt-14 aspect-[16/10] w-full object-cover object-[60%_50%] lg:absolute lg:inset-y-0 lg:right-0 lg:mt-0 lg:aspect-auto lg:h-full lg:w-[62%]"
+      />
     </section>
   );
 }

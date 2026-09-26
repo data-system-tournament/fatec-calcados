@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { ArrowDown, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
@@ -18,13 +18,17 @@ const LEVEL_FILTERS = [
   { code: "OURO", label: "Ouro" },
 ];
 
-// Feito com IA: busca, nível e página ficam na URL (/clientes?busca=ana&nivel=PRATA&pagina=2).
+type Ordem = "saldo" | "nome";
+
+// Feito com IA: busca, nível, ordem e página ficam na URL (/clientes?busca=ana&nivel=PRATA&ordem=nome&pagina=2).
+// Sem ordem na URL, a lista vem por saldo, do maior para o menor (o padrão do backend).
 // O texto da busca espera 300 ms sem digitar antes de ir para a URL, para não consultar a API a cada tecla.
 function Clientes() {
   const [params, setParams] = useSearchParams();
   const search = params.get("busca") ?? "";
   const level = params.get("nivel") ?? "";
   const page = Number(params.get("pagina")) || 1;
+  const order: Ordem = params.get("ordem") === "nome" ? "nome" : "saldo";
 
   const [text, setText] = useState(search);
   const debouncedText = useDebounce(text);
@@ -39,14 +43,22 @@ function Clientes() {
   }, [debouncedText, search, params, setParams]);
 
   const { data, error, loading, retry } = useCarregar(
-    () => fetchClients({ search, level, page }),
-    [search, level, page].join("|"),
+    () => fetchClients({ search, level, page, order }),
+    [search, level, page, order].join("|"),
   );
 
   function setLevel(value: string) {
     const next = new URLSearchParams(params);
     if (value) next.set("nivel", value);
     else next.delete("nivel");
+    next.delete("pagina");
+    setParams(next);
+  }
+
+  function setOrder(value: Ordem) {
+    const next = new URLSearchParams(params);
+    if (value === "saldo") next.delete("ordem");
+    else next.set("ordem", value);
     next.delete("pagina");
     setParams(next);
   }
@@ -98,10 +110,10 @@ function Clientes() {
               <table className="w-full border-collapse text-[13px]">
                 <thead>
                   <tr>
-                    <th className={`${thClass} text-left`}>Cliente</th>
+                    <ColunaOrdenavel ordem="nome" atual={order} onOrdenar={setOrder} alinhamento="text-left">Cliente</ColunaOrdenavel>
                     <th className={`${thClass} text-left`}>CPF</th>
                     <th className={`${thClass} text-left`}>Nível</th>
-                    <th className={`${thClass} text-right`}>Saldo</th>
+                    <ColunaOrdenavel ordem="saldo" atual={order} onOrdenar={setOrder} alinhamento="text-right">Saldo</ColunaOrdenavel>
                     <th className={`${thClass} text-right`}>Compras</th>
                     <th className={`${thClass} text-right`}>Última compra</th>
                   </tr>
@@ -110,7 +122,7 @@ function Clientes() {
                   {data.clients.map((client) => (
                     <tr key={client.id} className="hover:bg-subtle">
                       <td className={tdClass}>
-                        <Link to={`/clientes/${client.id}`} className="font-medium underline-offset-[3px] hover:underline">{client.name}</Link>
+                        <Link to={`/admin/clientes/${client.id}`} className="font-medium underline-offset-[3px] hover:underline">{client.name}</Link>
                       </td>
                       <td className={tdClass}>{client.cpf}</td>
                       <td className={tdClass}><LevelBadge level={client.level} /></td>
@@ -128,6 +140,30 @@ function Clientes() {
         </Card>
       )}
     </div>
+  );
+}
+
+// Cabeçalho que ordena a lista ao ser clicado. aria-sort diz ao leitor de tela qual coluna ordena
+// (saldo: do maior para o menor; nome: de A a Z).
+function ColunaOrdenavel({ ordem, atual, onOrdenar, alinhamento, children }: {
+  ordem: Ordem;
+  atual: Ordem;
+  onOrdenar: (ordem: Ordem) => void;
+  alinhamento: "text-left" | "text-right";
+  children: string;
+}) {
+  const ativa = ordem === atual;
+  return (
+    <th className={`${thClass} ${alinhamento}`} aria-sort={ativa ? (ordem === "saldo" ? "descending" : "ascending") : "none"}>
+      <button
+        type="button"
+        onClick={() => onOrdenar(ordem)}
+        className={`inline-flex items-center gap-1 font-medium hover:text-ink ${ativa ? "text-ink" : ""}`}
+      >
+        {children}
+        {ativa && <ArrowDown size={12} aria-hidden />}
+      </button>
+    </th>
   );
 }
 

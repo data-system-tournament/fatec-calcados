@@ -7,7 +7,7 @@ function NotFound() {
       <h1 className="text-xl font-semibold tracking-[-.015em]">Página não encontrada</h1>
       <p className="mt-2 text-[13px] text-muted">
         Esse endereço não existe. Volte para o{" "}
-        <Link to="/dashboard" className="font-medium text-ink underline underline-offset-[3px]">Dashboard</Link>.
+        <Link to="/admin/dashboard" className="font-medium text-ink underline underline-offset-[3px]">Dashboard</Link>.
       </p>
     </Card>
   );

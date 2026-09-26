@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createAccess, errorMessage } from "../../services/api";
-import { formatCpf, isValidCpf } from "../../utils/format";
+import { formatCpf, isValidCpf } from "../../utils/cpf";
 import { Campo, linkRodape, TelaAcesso } from "./TelaAcesso";
 
 // Primeiro acesso do cliente. Quem já compra na loja (CPF cadastrado no caixa) informa o mesmo nome

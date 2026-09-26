@@ -3,7 +3,7 @@ from django.contrib import admin
 
 from . import cpf as cpf_utils
 from . import services
-from .models import Caixa, Cliente, Compra, ItemCompra, Loja, MovimentoPontos, Produto
+from .models import Avaliacao, Caixa, Cliente, Compra, ItemCompra, Loja, MovimentoPontos, Produto
 
 
 @admin.register(Loja)
@@ -94,3 +94,11 @@ class MovimentoPontosAdmin(SomenteLeitura):
     search_fields = ("cliente__nome", "cliente__cpf")
     date_hierarchy = "data"
 
+
+# Somente leitura: cada avaliação já rendeu um lote de pontos, que o ledger não deixa apagar.
+@admin.register(Avaliacao)
+class AvaliacaoAdmin(SomenteLeitura):
+    list_display = ("criada_em", "cliente", "produto", "nota", "comentario")
+    list_filter = ("nota", "produto")
+    search_fields = ("cliente__nome", "cliente__cpf", "produto__nome", "comentario")
+    date_hierarchy = "criada_em"

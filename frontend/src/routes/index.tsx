@@ -1,13 +1,13 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import ClienteLayout from "../layouts/ClienteLayout";
 import MainLayout from "../layouts/MainLayout";
 import Actions from "../pages/acoes/Actions";
+import AvaliacoesLoja from "../pages/avaliacoes/AvaliacoesLoja";
 import ClientePerfil from "../pages/clientes/ClientePerfil";
 import Clientes from "../pages/clientes/Clientes";
+import Avaliacoes from "../pages/conta/Avaliacoes";
 import Checkout from "../pages/conta/Checkout";
 import Loja from "../pages/conta/Loja";
-import MeusDados from "../pages/conta/MeusDados";
-import MeusPontos from "../pages/conta/MeusPontos";
 import MinhaConta from "../pages/conta/MinhaConta";
 import MinhasCompras from "../pages/conta/MinhasCompras";
 import Dashboard from "../pages/dashboard/Dashboard";
@@ -37,25 +37,34 @@ export const router = createBrowserRouter([
       { path: "loja/carrinho", element: <Checkout /> },
       { path: "minha-conta", element: <MinhaConta /> },
       { path: "minha-conta/compras", element: <MinhasCompras /> },
-      { path: "minha-conta/pontos", element: <MeusPontos /> },
-      { path: "minha-conta/dados", element: <MeusDados /> },
+      { path: "minha-conta/avaliacoes", element: <Avaliacoes /> },
+      // Pontos e dados agora são seções da Minha conta; os endereços antigos levam até elas.
+      { path: "minha-conta/pontos", element: <Navigate to="/minha-conta#pontos" replace /> },
+      { path: "minha-conta/dados", element: <Navigate to="/minha-conta#dados" replace /> },
     ],
   },
+  // Área da loja (PDV e gestão): fica em /admin e só se chega digitando o endereço; a landing só leva
+  // o cliente para /login e /cadastro. Não confundir com o admin do Django (porta 8000).
   {
+    path: "admin",
     element: <MainLayout />,
     children: [
       {
         errorElement: <RouteError />,
         children: [
+          { index: true, element: <Navigate to="dashboard" replace /> },
           { path: "pdv", element: <Pdv /> },
           { path: "dashboard", element: <Dashboard /> },
           { path: "clientes", element: <Clientes /> },
           { path: "clientes/:id", element: <ClientePerfil /> },
           { path: "vendas", element: <Vendas /> },
           { path: "acoes", element: <Actions /> },
+          { path: "avaliacoes", element: <AvaliacoesLoja /> },
           { path: "*", element: <NotFound /> },
         ],
       },
     ],
   },
+  // Qualquer outro endereço volta para a landing, sem abrir o layout da loja.
+  { path: "*", element: <Navigate to="/" replace /> },
 ]);

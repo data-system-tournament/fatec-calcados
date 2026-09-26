@@ -10,6 +10,7 @@ urlpatterns = [
     path("api/clientes/<int:cliente_id>/perfil/", views.api_cliente_perfil, name="api_cliente_perfil"),
     path("api/clientes/<str:cpf>/", views.api_cliente, name="api_cliente"),
     path("api/vendas/", views.api_vendas, name="api_vendas"),
+    path("api/avaliacoes/", views.api_avaliacoes, name="api_avaliacoes"),
     path("api/vendas/<uuid:compra_id>/", views.api_venda_detalhe, name="api_venda_detalhe"),
     path("api/conta/", views.api_conta, name="api_conta"),
     path("api/conta/cadastro/", views.api_conta_cadastro, name="api_conta_cadastro"),
@@ -18,4 +19,5 @@ urlpatterns = [
     path("api/conta/senha/", views.api_conta_senha, name="api_conta_senha"),
     path("api/conta/compras/", views.api_conta_compras, name="api_conta_compras"),
     path("api/conta/compras/<uuid:compra_id>/", views.api_conta_compra_detalhe, name="api_conta_compra_detalhe"),
+    path("api/conta/avaliacoes/", views.api_conta_avaliacoes, name="api_conta_avaliacoes"),
 ]

@@ -137,3 +137,24 @@ class MovimentoPontos(models.Model):
     def __str__(self):
         return f"{self.get_tipo_display()} {self.pontos:+} ({self.cliente})"
 
+
+
+# Feito com IA: avaliação de um produto que o cliente comprou. Uma por cliente e produto (a restrição no
+# banco garante isso mesmo com dois envios ao mesmo tempo). `movimento` é o lote de pontos que a avaliação
+# rendeu; PROTECT porque o ledger não pode perder um movimento que ainda explica o saldo.
+class Avaliacao(models.Model):
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="avaliacoes")
+    produto = models.ForeignKey(Produto, on_delete=models.PROTECT, related_name="avaliacoes")
+    nota = models.PositiveSmallIntegerField()
+    comentario = models.TextField()
+    criada_em = models.DateTimeField(default=timezone.now)
+    movimento = models.OneToOneField(MovimentoPontos, on_delete=models.PROTECT, related_name="avaliacao")
+
+    class Meta:
+        ordering = ["-criada_em"]
+        verbose_name = "avaliação"
+        verbose_name_plural = "avaliações"
+        constraints = [models.UniqueConstraint(fields=["cliente", "produto"], name="uma_avaliacao_por_produto")]
+
+    def __str__(self):
+        return f"{self.cliente} avaliou {self.produto.nome} ({self.nota}/5)"

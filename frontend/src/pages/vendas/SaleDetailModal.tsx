@@ -43,7 +43,7 @@ function Detail({ sale, doCliente }: { sale: SaleDetail; doCliente: boolean }) {
         {doCliente
           ? sale.levelAtPurchase && `Você era nível ${sale.levelAtPurchase} nesta compra`
           : sale.client
-          ? <>Cliente: <Link to={`/clientes/${sale.client.id}`} className="font-medium text-ink underline underline-offset-[3px]">{sale.client.name}</Link>
+          ? <>Cliente: <Link to={`/admin/clientes/${sale.client.id}`} className="font-medium text-ink underline underline-offset-[3px]">{sale.client.name}</Link>
               {sale.levelAtPurchase && ` (${sale.levelAtPurchase} na compra)`}</>
           : "Venda sem CPF, nenhum ponto emitido"}
       </p>

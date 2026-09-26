@@ -1,25 +1,32 @@
-import { ChevronRight, Coins, Package, ShieldCheck, type LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Abas } from "../../components/ui/Abas";
 import { Card } from "../../components/ui/Card";
 import { LevelBadge } from "../../components/ui/LevelBadge";
 import { useConta } from "../../contexts/conta";
-import { paymentLabel } from "../../config";
 import type { ClientDashboard } from "../../types";
-import { formatDay, formatMoney, formatNumber, plural } from "../../utils/format";
-import { TONS, type Tom } from "../dashboard/tons";
+import { formatDay } from "../../utils/format";
+import Extrato from "./Extrato";
+import MeusDados from "./MeusDados";
+import MeusPontos from "./MeusPontos";
 import { ProgressoDoNivel } from "./pecas";
 
-// "Minha conta › Resumo", no formato das contas de loja online (Mercado Livre, Shopee): quem é o cliente,
-// o nível, e um cartão por seção (compras, pontos, dados) com o essencial e o link para a seção.
+const ABAS = [
+  { valor: "pontos", rotulo: "Pontos" },
+  { valor: "extrato", rotulo: "Extrato" },
+  { valor: "dados", rotulo: "Meus dados" },
+] as const;
+type Aba = (typeof ABAS)[number]["valor"];
+
+// "Minha conta › Meu perfil", como o "Meu perfil" do Mercado Livre: quem é o cliente e o nível em cima e,
+// embaixo, uma aba por assunto, para a página não virar um painel com tudo de uma vez. As compras têm
+// tela própria na sidebar, como os pedidos dessas lojas.
 function MinhaConta() {
   const { account } = useConta();
+  const [aba, trocarAba] = useAbaNaUrl();
   if (!account) return null;
 
-  const ultima = account.purchases[0];
-
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <Card className="flex flex-wrap items-center justify-between gap-5 p-[18px]">
         <div className="flex items-center gap-4">
           <span className="grid size-14 flex-none place-items-center rounded-full bg-violeta-soft text-lg font-semibold text-violeta" aria-hidden>
@@ -40,77 +47,26 @@ function MinhaConta() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-3 gap-4 max-[1000px]:grid-cols-1">
-        <Secao
-          to="/minha-conta/compras"
-          tom="ciano"
-          icone={Package}
-          titulo="Minhas compras"
-          resumo={`${formatNumber(account.totalPurchases)} ${plural(account.totalPurchases, "compra", "compras")} · ${formatMoney(account.totalSpent)}`}
-        >
-          {ultima ? (
-            <>
-              Última: {formatDay(ultima.date)} · {formatMoney(ultima.paid)}
-              <br />
-              {ultima.register ?? "Loja"} · {paymentLabel(ultima.payment)}
-            </>
-          ) : (
-            "Você ainda não comprou."
-          )}
-        </Secao>
-
-        <Secao
-          to="/minha-conta/pontos"
-          tom="azul"
-          icone={Coins}
-          titulo="Meus pontos"
-          resumo={`${formatNumber(account.points)} pts`}
-        >
-          {account.redeemableValue > 0 ? `Valem ${formatMoney(account.redeemableValue)} de desconto` : "A cada 100 pts, R$ 5,00 de desconto"}
-          <br />
-          {account.expiring.points > 0 ? (
-            <span className={TONS.ambar.icone}>{formatNumber(account.expiring.points)} pts vencem em {account.expiring.days} dias</span>
-          ) : (
-            `Você já economizou ${formatMoney(account.savings)}`
-          )}
-        </Secao>
-
-        <Secao to="/minha-conta/dados" tom="esmeralda" icone={ShieldCheck} titulo="Meus dados" resumo={account.name.split(" ")[0]}>
-          CPF {account.cpf}
-          <br />
-          Dados pessoais e alterar senha
-        </Secao>
+      <div className="flex flex-col gap-4">
+        <Abas abas={ABAS} valor={aba} onChange={trocarAba} rotulo="Seções do perfil" idBase="perfil" />
+        <div id="perfil-painel" role="tabpanel" aria-labelledby={`perfil-${aba}`}>
+          {aba === "pontos" && <MeusPontos account={account} />}
+          {aba === "extrato" && <Extrato account={account} />}
+          {aba === "dados" && <MeusDados account={account} />}
+        </div>
       </div>
     </div>
   );
 }
 
-function Secao({ to, tom, icone: Icone, titulo, resumo, children }: {
-  to: string;
-  tom: Tom;
-  icone: LucideIcon;
-  titulo: string;
-  resumo: string;
-  children: ReactNode;
-}) {
-  return (
-    <Link
-      to={to}
-      className="group flex flex-col gap-3 rounded-[10px] border border-line bg-surface p-[18px] shadow-card transition-colors hover:border-line-2"
-    >
-      <span className="flex items-center justify-between">
-        <span className="flex items-center gap-2.5 text-[14px] font-medium">
-          <span className={`grid size-8 place-items-center rounded-md ${TONS[tom].chip}`} aria-hidden>
-            <Icone size={17} />
-          </span>
-          {titulo}
-        </span>
-        <ChevronRight size={17} className="text-faint transition-colors group-hover:text-ink" aria-hidden />
-      </span>
-      <strong className="text-[20px] leading-tight font-semibold tracking-[-.02em] tabular-nums">{resumo}</strong>
-      <span className="text-[13px] leading-relaxed text-muted">{children}</span>
-    </Link>
-  );
+// A aba fica no #hash da URL: /minha-conta#dados abre direto nos dados (os endereços antigos
+// /minha-conta/pontos e /minha-conta/dados redirecionam para cá). Trocar de aba não cria entrada no
+// histórico (replace), então o voltar do navegador sai da página em vez de passar pelas abas.
+function useAbaNaUrl(): [Aba, (aba: Aba) => void] {
+  const { hash } = useLocation();
+  const navigate = useNavigate();
+  const aba = ABAS.find((a) => `#${a.valor}` === hash)?.valor ?? "pontos";
+  return [aba, (nova) => navigate({ hash: nova }, { replace: true })];
 }
 
 function iniciais(nome: ClientDashboard["name"]): string {

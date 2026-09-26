@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from . import cpf as cpf_utils
 from . import regras
-from .models import Caixa, Cliente, Compra, FormaPagamento, ItemCompra, Loja, MovimentoPontos, Produto
+from .models import Avaliacao, Caixa, Cliente, Compra, FormaPagamento, ItemCompra, Loja, MovimentoPontos, Produto
 
 Tipo = MovimentoPontos.Tipo
 
@@ -327,3 +327,36 @@ def alterar_senha(cliente: Cliente, senha_atual, nova_senha):
     usuario.set_password(nova_senha)
     usuario.save(update_fields=["password"])
     return usuario
+
+
+# Feito com IA: avaliação de produto com pontos. Ordem: trava o cliente (dois envios ao mesmo tempo não
+# rendem pontos em dobro) -> produto existe -> o cliente comprou o produto (no caixa ou online) -> ainda
+# não avaliou -> nota e comentário válidos (regras.problema_da_avaliacao) -> grava o lote de pontos e a
+# avaliação. O lote é um ACUMULO comum: vale 12 meses, é usado no resgate FIFO e conta para o nível.
+@transaction.atomic
+def avaliar_produto(cliente: Cliente, sku, nota, comentario, data=None) -> Avaliacao:
+    data = data or timezone.now()
+    cliente = Cliente.objects.select_for_update().get(pk=cliente.pk)
+
+    produto = Produto.objects.filter(sku=str(sku or "").strip()).first()
+    if produto is None:
+        raise RegraViolada("Produto não encontrado.")
+    if not ItemCompra.objects.filter(compra__cliente=cliente, produto=produto, compra__data__lte=data).exists():
+        raise RegraViolada("Você só pode avaliar produtos que comprou.")
+    if cliente.avaliacoes.filter(produto=produto).exists():
+        raise RegraViolada("Você já avaliou este produto.")
+    problema = regras.problema_da_avaliacao(nota, comentario)
+    if problema:
+        raise RegraViolada(problema)
+
+    lote = MovimentoPontos.objects.create(
+        cliente=cliente,
+        tipo=Tipo.ACUMULO,
+        pontos=regras.PONTOS_POR_AVALIACAO,
+        restante=regras.PONTOS_POR_AVALIACAO,
+        data=data,
+        expira_em=data + regras.VALIDADE_PONTOS,
+    )
+    return Avaliacao.objects.create(
+        cliente=cliente, produto=produto, nota=nota, comentario=comentario.strip(), criada_em=data, movimento=lote
+    )

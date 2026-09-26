@@ -64,6 +64,20 @@ class ConsultasTest(TestCase):
         self.assertEqual(bronze, ["Bruno Bronze", "Carla Sem Compra"])
         self.assertEqual(self.clientes(nivel="OURO")["total"], 0)
 
+    def test_lista_ordena_por_saldo_do_maior_para_o_menor_ou_por_nome(self):
+        # "Aline" tem 1 ponto e vem depois de quem tem mais, mesmo sendo a primeira no alfabeto.
+        services.cadastrar_cliente("12345678909", "Aline Um Ponto")
+        services.registrar_compra("12345678909", self.caixa1.loja, "1.00")
+        por_saldo = [(c["nome"], c["saldo_pontos"]) for c in self.clientes()["clientes"]]
+        self.assertEqual(
+            por_saldo,
+            [("Ana Prata", 1000), ("Bruno Bronze", 20), ("Aline Um Ponto", 1), ("Carla Sem Compra", 0)],
+        )
+        por_nome = [c["nome"] for c in self.clientes(ordem="nome")["clientes"]]
+        self.assertEqual(por_nome, ["Aline Um Ponto", "Ana Prata", "Bruno Bronze", "Carla Sem Compra"])
+        # Ordem desconhecida cai no padrão (saldo).
+        self.assertEqual([c["nome"] for c in self.clientes(ordem="lixo")["clientes"]], [n for n, _ in por_saldo])
+
     def test_paginacao_devolve_a_ultima_pagina_quando_passa_do_fim(self):
         for i in range(22):
             Cliente.objects.create(cpf=f"9{i:010d}", nome=f"Extra {i:02d}")

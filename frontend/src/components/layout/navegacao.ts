@@ -1,5 +1,5 @@
 import {
-  CircleUser, Coins, LayoutDashboard, Package, Receipt, ShieldCheck, ShoppingBag, ShoppingCart, Users, Zap, type LucideIcon,
+  CircleUser, LayoutDashboard, Package, Receipt, ShoppingBag, ShoppingCart, Star, Users, Zap, type LucideIcon,
 } from "lucide-react";
 
 // Cada tela tem uma cor própria na sidebar: o ícone sempre pintado e o fundo tingido quando ativa.
@@ -23,16 +23,17 @@ export type GrupoDeRotas = { heading?: string; rotas: Rota[] };
 export const GRUPOS: GrupoDeRotas[] = [
   {
     rotas: [
-      { to: "/pdv", title: "PDV / Caixa", icon: ShoppingBag, cor: COR.laranja },
-      { to: "/dashboard", title: "Dashboard", icon: LayoutDashboard, cor: COR.azul },
+      { to: "/admin/pdv", title: "PDV / Caixa", icon: ShoppingBag, cor: COR.laranja },
+      { to: "/admin/dashboard", title: "Dashboard", icon: LayoutDashboard, cor: COR.azul },
     ],
   },
   {
     heading: "Gestão",
     rotas: [
-      { to: "/clientes", title: "Clientes", icon: Users, cor: COR.violeta },
-      { to: "/vendas", title: "Vendas", icon: Receipt, cor: COR.ciano },
-      { to: "/acoes", title: "Ações", icon: Zap, cor: COR.rosa },
+      { to: "/admin/clientes", title: "Clientes", icon: Users, cor: COR.violeta },
+      { to: "/admin/vendas", title: "Vendas", icon: Receipt, cor: COR.ciano },
+      { to: "/admin/acoes", title: "Ações", icon: Zap, cor: COR.rosa },
+      { to: "/admin/avaliacoes", title: "Avaliações", icon: Star, cor: COR.esmeralda },
     ],
   },
 ];
@@ -40,7 +41,8 @@ export const GRUPOS: GrupoDeRotas[] = [
 export const ROTAS: Rota[] = GRUPOS.flatMap((grupo) => grupo.rotas);
 
 // Área do cliente, organizada como as lojas online (Mercado Livre, Shopee): a loja é a tela inicial
-// e "Minha conta" junta compras, pontos (como as "moedas" dessas lojas) e dados/segurança.
+// e "Minha conta" tem o perfil (pontos, como as "moedas" dessas lojas, e dados numa página só, como a
+// "Sua conta" da Amazon) e as compras, com tela própria como os pedidos.
 export const GRUPOS_CLIENTE: GrupoDeRotas[] = [
   {
     heading: "Loja online",
@@ -52,10 +54,9 @@ export const GRUPOS_CLIENTE: GrupoDeRotas[] = [
   {
     heading: "Minha conta",
     rotas: [
-      { to: "/minha-conta", title: "Resumo", icon: CircleUser, cor: COR.violeta, end: true },
+      { to: "/minha-conta", title: "Meu perfil", icon: CircleUser, cor: COR.violeta, end: true },
       { to: "/minha-conta/compras", title: "Minhas compras", icon: Package, cor: COR.ciano },
-      { to: "/minha-conta/pontos", title: "Meus pontos", icon: Coins, cor: COR.azul },
-      { to: "/minha-conta/dados", title: "Meus dados", icon: ShieldCheck, cor: COR.esmeralda },
+      { to: "/minha-conta/avaliacoes", title: "Avaliações", icon: Star, cor: COR.esmeralda },
     ],
   },
 ];
@@ -64,8 +65,8 @@ export function atalhoBusca(): string {
   return /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘ K" : "Ctrl K";
 }
 
-// "/clientes/12" também é a tela Clientes. Vence a rota mais específica: "/minha-conta/compras" é Minhas compras,
-// não "Resumo".
+// "/admin/clientes/12" também é a tela Clientes. Vence a rota mais específica: "/minha-conta/compras" é Minhas compras,
+// não "Meu perfil".
 export function tituloDaRota(pathname: string, grupos: GrupoDeRotas[] = GRUPOS): string {
   const candidatas = grupos
     .flatMap((grupo) => grupo.rotas)

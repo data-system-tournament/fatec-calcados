@@ -17,7 +17,12 @@ import { useAtalhoBusca } from "../hooks/useAtalhoBusca";
 import { useSidebar } from "../hooks/useSidebar";
 import { useTituloDaRota } from "../hooks/useTituloDaRota";
 import { useTour } from "../hooks/useTour";
-import { todayLabel } from "../utils/format";
+
+// Data do cabeçalho: "Sexta-feira, 26 de setembro".
+function todayLabel(): string {
+  const text = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  return text[0].toUpperCase() + text.slice(1);
+}
 
 function MainLayout() {
   return (
@@ -36,7 +41,7 @@ const asideDesktop = "sticky top-0 h-dvh flex-none self-start border-r border-li
 const asideMobile = "fixed inset-y-0 left-0 z-40 w-[260px] border-r border-line bg-surface shadow-pop transition-transform duration-300";
 
 function Shell() {
-  const isPdv = useMatch("/pdv") !== null;
+  const isPdv = useMatch("/admin/pdv") !== null;
   const { pathname } = useLocation();
   const [searching, setSearching] = useState(false);
   const [ajustando, setAjustando] = useState(false);
@@ -67,8 +72,8 @@ function Shell() {
   const { online } = useCaixa();
   const { openCount } = useAcoes();
   function avisoDaRota(rota: Rota): AvisoDaRota | undefined {
-    if (rota.to === "/pdv" && !online) return { etiqueta: "offline", descricao: "offline" };
-    if (rota.to === "/acoes" && openCount > 0) return { contador: openCount, descricao: `${openCount} pendentes` };
+    if (rota.to === "/admin/pdv" && !online) return { etiqueta: "offline", descricao: "offline" };
+    if (rota.to === "/admin/acoes" && openCount > 0) return { contador: openCount, descricao: `${openCount} pendentes` };
   }
 
   function handleSearch() {

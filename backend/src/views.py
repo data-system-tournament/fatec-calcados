@@ -164,6 +164,7 @@ def api_clientes(request):
             busca=request.GET.get("busca", ""),
             nivel=request.GET.get("nivel", ""),
             pagina=_pagina(request),
+            ordem=request.GET.get("ordem", "saldo"),
         ))
     return _cadastrar_cliente(request)
 
@@ -333,3 +334,30 @@ def api_conta_senha(request):
     # Sem isso a troca de senha encerraria a sessão atual.
     update_session_auth_hash(request, usuario)
     return JsonResponse({})
+
+
+# GET: produtos para avaliar e avaliações feitas. POST {sku, nota, comentario}: avalia e ganha os pontos;
+# responde com a lista já atualizada.
+@require_http_methods(["GET", "POST"])
+def api_conta_avaliacoes(request):
+    cliente = _cliente_logado(request)
+    if cliente is None:
+        return _sem_sessao()
+    if request.method == "GET":
+        return JsonResponse(consultas.avaliacoes_do_cliente(cliente))
+    try:
+        dados = _ler_json(request)
+        services.avaliar_produto(cliente, dados.get("sku"), dados.get("nota"), dados.get("comentario"))
+    except services.RegraViolada as e:
+        return _erro(str(e))
+    return JsonResponse(consultas.avaliacoes_do_cliente(cliente), status=201)
+
+
+# Avaliações dos clientes para o gerente: resumo, nota por produto e a lista (filtros ?produto=&nota=).
+@require_GET
+def api_avaliacoes(request):
+    return JsonResponse(consultas.avaliacoes_da_loja(
+        produto=request.GET.get("produto", ""),
+        nota=request.GET.get("nota", ""),
+        pagina=_pagina(request),
+    ))

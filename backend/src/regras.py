@@ -64,3 +64,21 @@ def faixa_do_nivel(codigo: str):
             return minimo, limite
     raise ValueError(f"Nível desconhecido: {codigo}")
 
+
+
+# Feito com IA: avaliação de produto. Quem comprou um produto (no caixa ou na loja online) avalia cada
+# produto uma vez e ganha estes pontos, num lote com a mesma validade de uma compra. O comentário mínimo
+# evita avaliações vazias feitas só pelos pontos.
+PONTOS_POR_AVALIACAO = 20
+NOTA_MINIMA, NOTA_MAXIMA = 1, 5
+COMENTARIO_MINIMO = 20
+
+
+# Devolve o motivo de a avaliação não valer, ou None se estiver certa. `type(...) is int` recusa
+# True/False e 4.5, que o JSON também aceita.
+def problema_da_avaliacao(nota, comentario) -> str | None:
+    if type(nota) is not int or not NOTA_MINIMA <= nota <= NOTA_MAXIMA:
+        return f"Escolha uma nota de {NOTA_MINIMA} a {NOTA_MAXIMA} estrelas."
+    if not isinstance(comentario, str) or len(comentario.strip()) < COMENTARIO_MINIMO:
+        return f"Conte um pouco mais sobre o produto: pelo menos {COMENTARIO_MINIMO} caracteres."
+    return None

@@ -47,7 +47,7 @@ function Ranking({ ranking, end }: RankingProps) {
                     </span>
                   </td>
                   <td className={tdClass}>
-                    <Link to={`/clientes/${row.id}`} className="font-medium underline-offset-[3px] hover:underline">{row.name}</Link>
+                    <Link to={`/admin/clientes/${row.id}`} className="font-medium underline-offset-[3px] hover:underline">{row.name}</Link>
                   </td>
                   <td className={tdClass}>{row.cpf}</td>
                   <td className={tdClass}><LevelBadge level={row.level} /></td>

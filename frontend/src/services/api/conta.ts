@@ -82,7 +82,3 @@ export async function buyOnline(purchase: OnlinePurchase): Promise<OnlinePurchas
 export async function fetchAccountPurchase(id: string): Promise<SaleDetail> {
   return toSaleDetail(await request<ApiSaleDetail>(`/api/conta/compras/${id}/`));
 }
-
-export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
-  await request("/api/conta/senha/", { method: "POST", body: { senha_atual: currentPassword, nova_senha: newPassword } });
-}

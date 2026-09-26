@@ -6,4 +6,4 @@ export { fetchClient, registerClient, fetchClients, fetchClientProfile, type Cli
 export { sendSale, fetchSales, fetchSaleDetail, type SaleQuery } from "./vendas";
 export { fetchActions } from "./acoes";
 export { fetchDashboard } from "./dashboard";
-export { fetchAccount, signIn, createAccess, signOut, buyOnline, fetchAccountPurchase, changePassword } from "./conta";
+export { fetchAccount, signIn, createAccess, signOut, buyOnline, fetchAccountPurchase } from "./conta";

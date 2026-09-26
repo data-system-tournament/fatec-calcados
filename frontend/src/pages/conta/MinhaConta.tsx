@@ -78,7 +78,7 @@ function MinhaConta() {
         <Secao to="/minha-conta/dados" tom="esmeralda" icone={ShieldCheck} titulo="Meus dados" resumo={account.name.split(" ")[0]}>
           CPF {account.cpf}
           <br />
-          Dados pessoais e alterar senha
+          Dados pessoais
         </Secao>
       </div>
     </div>

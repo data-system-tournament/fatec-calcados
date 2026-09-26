@@ -23,13 +23,13 @@ docker compose exec backend python manage.py test src.tests.test_regras.RegrasPu
 # Frontend (run in frontend/)
 npm run lint     # oxlint
 npm run build    # tsc -b && vite build
-npm test         # vitest run (pure logic: regras.ts, utils/format, utils/cpf, dashboard csv)
+npm test         # vitest run (pure logic + API mappers with mocked fetch)
 ```
 
 - UI: http://localhost:5173/ (`/pdv`, `/dashboard`, `/clientes`, `/vendas`, `/acoes`; client area: `/login`, `/cadastro`, `/loja`, `/minha-conta`) · Admin: http://localhost:8000/admin/
 - The frontend container keeps `node_modules` in the named volume `frontend_node_modules`, which `--build` does not refresh. The compose `command` handles this: on start it compares `package-lock.json` with `node_modules/.lock-instalado` and runs `npm ci` only when they differ. After changing dependencies, `docker compose restart frontend` is enough. It stays inline in the compose file (not a `.sh`) because `core.autocrlf=true` would give a script CRLF line endings.
 - Never run `docker compose down -v`: it deletes the `db_data` volume.
-- The frontend tests (Vitest) cover pure logic only (`regras.ts`, `utils/`, `pages/dashboard/csv.ts`). There are no component tests.
+- The frontend tests (Vitest, Node environment) cover pure logic (`regras.ts`, `utils/`, `pages/dashboard/csv.ts`, each test next to its file) and the API layer: `src/testes/api.test.ts` runs every `services/api` function against a fake `fetch` (`testes/apiFalsa.ts`, `simularApi`/`chamada`) fed with mocked responses in `src/testes/dados/`. The fixtures are typed with the exported `Api...` types, so `tsc -b` flags them when the API contract changes; when a backend field changes, update the `Api...` type, the fixture and the test together. There are no component tests.
 - The Vite dev server in Docker does not see deleted or renamed files: after renaming a module (`x.js` → `x.ts`), `touch` the files that import it or run `docker compose restart frontend`, or the browser keeps requesting the old name (404).
 
 ## Backend architecture (`backend/src/`, a single Django app)

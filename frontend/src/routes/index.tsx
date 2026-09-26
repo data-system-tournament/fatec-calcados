@@ -2,8 +2,10 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import ClienteLayout from "../layouts/ClienteLayout";
 import MainLayout from "../layouts/MainLayout";
 import Actions from "../pages/acoes/Actions";
+import AvaliacoesLoja from "../pages/avaliacoes/AvaliacoesLoja";
 import ClientePerfil from "../pages/clientes/ClientePerfil";
 import Clientes from "../pages/clientes/Clientes";
+import Avaliacoes from "../pages/conta/Avaliacoes";
 import Checkout from "../pages/conta/Checkout";
 import Loja from "../pages/conta/Loja";
 import MinhaConta from "../pages/conta/MinhaConta";
@@ -35,6 +37,7 @@ export const router = createBrowserRouter([
       { path: "loja/carrinho", element: <Checkout /> },
       { path: "minha-conta", element: <MinhaConta /> },
       { path: "minha-conta/compras", element: <MinhasCompras /> },
+      { path: "minha-conta/avaliacoes", element: <Avaliacoes /> },
       // Pontos e dados agora são seções da Minha conta; os endereços antigos levam até elas.
       { path: "minha-conta/pontos", element: <Navigate to="/minha-conta#pontos" replace /> },
       { path: "minha-conta/dados", element: <Navigate to="/minha-conta#dados" replace /> },
@@ -56,6 +59,7 @@ export const router = createBrowserRouter([
           { path: "clientes/:id", element: <ClientePerfil /> },
           { path: "vendas", element: <Vendas /> },
           { path: "acoes", element: <Actions /> },
+          { path: "avaliacoes", element: <AvaliacoesLoja /> },
           { path: "*", element: <NotFound /> },
         ],
       },

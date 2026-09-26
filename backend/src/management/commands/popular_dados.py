@@ -10,7 +10,7 @@ from django.utils.text import slugify
 
 from src import cpf as cpf_utils
 from src import regras, services
-from src.models import Caixa, Cliente, Compra, FormaPagamento, Loja, MovimentoPontos, Produto
+from src.models import Avaliacao, Caixa, Cliente, Compra, FormaPagamento, Loja, MovimentoPontos, Produto
 
 CIDADES = [
     "Araras", "Limeira", "Rio Claro", "Piracicaba", "Leme", "Pirassununga",
@@ -73,6 +73,8 @@ class Command(BaseCommand):
         inicio = agora - timedelta(days=30 * opts["meses"])
         dias_total = (agora - inicio).days
 
+        # Avaliações antes dos movimentos: cada uma protege o lote de pontos que rendeu.
+        Avaliacao.objects.all().delete()
         MovimentoPontos.objects.all().delete()
         Compra.objects.all().delete()
         Caixa.objects.all().delete()

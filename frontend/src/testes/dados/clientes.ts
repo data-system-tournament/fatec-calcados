@@ -38,6 +38,7 @@ export const listaDeClientesApi: ApiClientList = {
   ],
 };
 
+// Além das compras, avaliou o tênis (+20 pts, lote próprio): saldo 1.250 + 20 = 1.270.
 export const perfilDoClienteApi: ApiClientProfile = {
   id: 1,
   nome: "Ana Souza",
@@ -46,9 +47,9 @@ export const perfilDoClienteApi: ApiClientProfile = {
   loja_cadastro: "Araras",
   nivel_nome: "Prata",
   bonus_percentual: 10,
-  pontos_12m: 2250,
-  proximo_nivel: { nome: "Ouro", faltam: 2750 },
-  saldo_pontos: 1250,
+  pontos_12m: 2270,
+  proximo_nivel: { nome: "Ouro", faltam: 2730 },
+  saldo_pontos: 1270,
   pontos_resgataveis: 1200,
   valor_resgatavel: 60,
   total_compras: 4,
@@ -58,6 +59,7 @@ export const perfilDoClienteApi: ApiClientProfile = {
   lotes: [
     { pontos: 713, expira_em: "2026-11-02" },
     { pontos: 537, expira_em: "2027-09-20" },
+    { pontos: 20, expira_em: "2027-09-22" },
   ],
   compras: [
     {
@@ -72,7 +74,8 @@ export const perfilDoClienteApi: ApiClientProfile = {
     },
   ],
   movimentos: [
-    { data: "2026-09-20T15:10:00-03:00", tipo: "RESGATE", pontos: -1000 },
-    { data: "2026-09-20T15:10:00-03:00", tipo: "ACUMULO", pontos: 537 },
+    { data: "2026-09-22T09:00:00-03:00", tipo: "ACUMULO", pontos: 20, avaliacao: "Tênis Corrida Leve" },
+    { data: "2026-09-20T15:10:00-03:00", tipo: "RESGATE", pontos: -1000, avaliacao: null },
+    { data: "2026-09-20T15:10:00-03:00", tipo: "ACUMULO", pontos: 537, avaliacao: null },
   ],
 };

@@ -1,4 +1,4 @@
-import type { ClientDashboard, OnlinePurchase, OnlinePurchaseResult, SaleDetail } from "../../types";
+import type { ClientDashboard, OnlinePurchase, OnlinePurchaseResult, Reviews, SaleDetail } from "../../types";
 import { toClientProfile, type ApiClientProfile } from "./clientes";
 import { ApiError, ensureCsrfCookie, request } from "./http";
 import { toSaleDetail, type ApiSaleDetail } from "./vendas";
@@ -81,4 +81,40 @@ export async function buyOnline(purchase: OnlinePurchase): Promise<OnlinePurchas
 
 export async function fetchAccountPurchase(id: string): Promise<SaleDetail> {
   return toSaleDetail(await request<ApiSaleDetail>(`/api/conta/compras/${id}/`));
+}
+
+// ---------- Avaliações (produtos comprados que o cliente avalia para ganhar pontos) ----------
+
+export type ApiReviews = {
+  pontos_por_avaliacao: number;
+  comentario_minimo: number;
+  para_avaliar: { sku: string; nome: string; preco: number; ultima_compra: string }[];
+  avaliadas: { sku: string; nome: string; nota: number; comentario: string; data: string; pontos: number }[];
+};
+
+function toReviews(d: ApiReviews): Reviews {
+  return {
+    pointsPerReview: d.pontos_por_avaliacao,
+    minComment: d.comentario_minimo,
+    pending: d.para_avaliar.map((p) => ({ sku: p.sku, name: p.nome, price: p.preco, lastPurchase: p.ultima_compra })),
+    done: d.avaliadas.map((a) => ({
+      sku: a.sku,
+      name: a.nome,
+      rating: a.nota,
+      comment: a.comentario,
+      date: a.data,
+      points: a.pontos,
+    })),
+  };
+}
+
+export async function fetchReviews(): Promise<Reviews> {
+  return toReviews(await request<ApiReviews>("/api/conta/avaliacoes/"));
+}
+
+// Devolve a lista já atualizada (o produto sai de "para avaliar" e entra em "avaliadas").
+export async function sendReview(sku: string, rating: number, comment: string): Promise<Reviews> {
+  return toReviews(
+    await request<ApiReviews>("/api/conta/avaliacoes/", { method: "POST", body: { sku, nota: rating, comentario: comment } }),
+  );
 }

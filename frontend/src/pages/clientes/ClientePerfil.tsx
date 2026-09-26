@@ -81,7 +81,7 @@ function Perfil({ client }: { client: ClientProfile }) {
             <ul className="max-h-64 overflow-auto pr-2">
               {client.movements.map((movement, index) => (
                 <li key={`${movement.date}-${index}`} className="flex justify-between border-b border-line py-2 text-[13px] first:pt-0 last:border-0 last:pb-0">
-                  <span>{MOVEMENT_LABELS[movement.type]}<small className="ml-2 text-xs text-muted">{formatDay(movement.date)}</small></span>
+                  <span>{movement.review ? `Avaliação · ${movement.review}` : MOVEMENT_LABELS[movement.type]}<small className="ml-2 text-xs text-muted">{formatDay(movement.date)}</small></span>
                   <b className={`font-semibold ${movement.points > 0 ? "text-ok" : "text-danger"}`}>
                     {movement.points > 0 ? "+" : "−"}{formatNumber(Math.abs(movement.points))}
                   </b>

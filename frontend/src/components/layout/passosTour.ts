@@ -43,6 +43,11 @@ export function passosDoTour(): PassoTour[] {
       texto: "Listas de ações para a gestão. Marque as que você já fez; o número no menu mostra quantas ainda estão pendentes.",
     },
     {
+      alvo: "/admin/avaliacoes",
+      titulo: "Avaliações",
+      texto: "O que os clientes acharam dos produtos: nota média, nota por produto e os comentários. Clique num produto para ler só os dele.",
+    },
+    {
       alvo: "conexao",
       titulo: "Status do caixa",
       texto: "Mostra se este caixa está conectado. Offline, as vendas continuam sendo registradas e ficam pendentes até a conexão voltar.",

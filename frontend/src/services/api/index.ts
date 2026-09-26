@@ -5,5 +5,8 @@ export { fetchProducts } from "./produtos";
 export { fetchClient, registerClient, fetchClients, fetchClientProfile, type ClientQuery } from "./clientes";
 export { sendSale, fetchSales, fetchSaleDetail, type SaleQuery } from "./vendas";
 export { fetchActions } from "./acoes";
+export { fetchStoreReviews, type StoreReviewQuery } from "./avaliacoes";
 export { fetchDashboard } from "./dashboard";
-export { fetchAccount, signIn, createAccess, signOut, buyOnline, fetchAccountPurchase } from "./conta";
+export {
+  fetchAccount, signIn, createAccess, signOut, buyOnline, fetchAccountPurchase, fetchReviews, sendReview,
+} from "./conta";

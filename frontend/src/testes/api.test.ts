@@ -1,14 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { REGISTER_CODE } from "../config";
 import {
-  buyOnline, fetchAccount, fetchActions, fetchClient, fetchClientProfile, fetchClients, fetchDashboard,
-  fetchProducts, fetchSaleDetail, fetchSales, registerClient, sendSale, signIn,
+  buyOnline, fetchAccount, fetchReviews, fetchStoreReviews, fetchActions, fetchClient, fetchClientProfile, fetchClients, fetchDashboard,
+  fetchProducts, fetchSaleDetail, fetchSales, registerClient, sendReview, sendSale, signIn,
 } from "../services/api";
 import type { Sale } from "../types";
 import { chamada, simularApi } from "./apiFalsa";
 import { acoesApi } from "./dados/acoes";
+import { avaliacoesDaLojaApi } from "./dados/avaliacoes";
 import { clientePdvApi, listaDeClientesApi, perfilDoClienteApi } from "./dados/clientes";
-import { painelDoClienteApi } from "./dados/conta";
+import { avaliacoesApi, painelDoClienteApi } from "./dados/conta";
 import { dashboardApi } from "./dados/dashboard";
 import { produtosApi } from "./dados/produtos";
 import { detalheDaVendaApi, listaDeVendasApi } from "./dados/vendas";
@@ -94,6 +95,10 @@ describe("clientes", () => {
     const fetch = simularApi([{ corpo: listaDeClientesApi }]);
     const lista = await fetchClients({ search: "ana", level: "", page: 2 });
     expect(chamada(fetch).url).toBe("/api/clientes/?busca=ana&pagina=2");
+    // Sem ordem, o backend usa o saldo; com ordem, ela vai na URL.
+    const porNome = simularApi([{ corpo: listaDeClientesApi }]);
+    await fetchClients({ order: "nome" });
+    expect(chamada(porNome).url).toBe("/api/clientes/?ordem=nome");
     expect(lista.clients[1]).toEqual({
       id: 2,
       name: "Bruno Lima",
@@ -108,13 +113,16 @@ describe("clientes", () => {
   it("converte o perfil com lotes, compras e movimentos", async () => {
     simularApi([{ corpo: perfilDoClienteApi }]);
     const perfil = await fetchClientProfile(1);
-    expect(perfil.nextLevel).toEqual({ name: "Ouro", missing: 2750 });
+    expect(perfil.nextLevel).toEqual({ name: "Ouro", missing: 2730 });
     expect(perfil.lots).toEqual([
       { points: 713, expiresAt: "2026-11-02" },
       { points: 537, expiresAt: "2027-09-20" },
+      { points: 20, expiresAt: "2027-09-22" },
     ]);
     expect(perfil.purchases[0]).toMatchObject({ paid: 489.6, pointsEarned: 537, pointsRedeemed: 1000 });
-    expect(perfil.movements.map((m) => m.type)).toEqual(["RESGATE", "ACUMULO"]);
+    expect(perfil.movements.map((m) => m.type)).toEqual(["ACUMULO", "RESGATE", "ACUMULO"]);
+    // O acúmulo de uma avaliação diz de qual produto veio; o de compra, não.
+    expect(perfil.movements.map((m) => m.review)).toEqual(["Tênis Corrida Leve", null, null]);
   });
 });
 
@@ -194,7 +202,7 @@ describe("área do cliente", () => {
   it("converte o painel: perfil mais progresso, pontos a vencer e economia", async () => {
     simularApi([{ corpo: painelDoClienteApi }]);
     const painel = await fetchAccount();
-    expect(painel).toMatchObject({ name: "Ana Souza", points: 1250, levelProgress: 31, savings: 50 });
+    expect(painel).toMatchObject({ name: "Ana Souza", points: 1270, levelProgress: 32, savings: 50 });
     expect(painel?.expiring).toEqual({ days: 60, points: 713, nextDate: "2026-11-02" });
   });
 
@@ -217,5 +225,44 @@ describe("área do cliente", () => {
     const resultado = await buyOnline({ id: "c1", items: [{ sku: "TEN-001", quantity: 1 }], payment: "PIX", pointsToRedeem: 0 });
     expect(chamada(fetch).body).not.toHaveProperty("cpf");
     expect(resultado).toEqual({ id: "c1", total: 459.7, discount: 0, pointsEarned: 505, balance: 1755 });
+  });
+});
+
+describe("avaliações", () => {
+  it("converte o que falta avaliar, o que já foi avaliado e as regras", async () => {
+    simularApi([{ corpo: avaliacoesApi }]);
+    const avaliacoes = await fetchReviews();
+    expect(avaliacoes).toMatchObject({ pointsPerReview: 20, minComment: 20 });
+    expect(avaliacoes.pending).toEqual([
+      { sku: "MEI-002", name: "Meia Esportiva", price: 39.95, lastPurchase: "2026-09-20T15:10:00-03:00" },
+    ]);
+    expect(avaliacoes.done[0]).toMatchObject({ name: "Tênis Corrida Leve", rating: 5, points: 20 });
+  });
+
+  it("envia SKU, nota e comentário com os nomes da API", async () => {
+    const fetch = simularApi([{ status: 201, corpo: avaliacoesApi }]);
+    await sendReview("MEI-002", 4, "Boa meia, não esquenta o pé.");
+    expect(chamada(fetch)).toMatchObject({
+      url: "/api/conta/avaliacoes/",
+      method: "POST",
+      body: { sku: "MEI-002", nota: 4, comentario: "Boa meia, não esquenta o pé." },
+    });
+  });
+
+  it("recusa do backend (ex.: já avaliou) chega como erro com a mensagem", async () => {
+    simularApi([{ status: 400, corpo: { erro: "Você já avaliou este produto." } }]);
+    await expect(sendReview("TEN-001", 5, "Muito confortável, uso todo dia.")).rejects.toThrow("Você já avaliou este produto.");
+  });
+});
+
+describe("avaliações na área da loja", () => {
+  it("manda os filtros e converte resumo, notas, produtos e a lista", async () => {
+    const fetch = simularApi([{ corpo: avaliacoesDaLojaApi }]);
+    const dados = await fetchStoreReviews({ product: "MEI-002", rating: "", page: 1 });
+    expect(chamada(fetch).url).toBe("/api/avaliacoes/?produto=MEI-002&pagina=1");
+    expect(dados.summary).toEqual({ total: 3, average: 3.7, points: 60 });
+    expect(dados.byRating[0]).toEqual({ rating: 5, count: 1 });
+    expect(dados.byProduct[0]).toEqual({ sku: "TEN-001", name: "Tênis Corrida Leve", count: 2, average: 4.5 });
+    expect(dados.reviews[0]).toMatchObject({ client: { id: 1, name: "Ana Souza" }, rating: 2 });
   });
 });

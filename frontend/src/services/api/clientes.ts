@@ -45,7 +45,8 @@ export async function registerClient(cpf: string, name: string): Promise<Client>
 
 // ---------- Tela de Clientes (lista e perfil) ----------
 
-export type ClientQuery = { search?: string; level?: string; page?: number };
+// order: "saldo" (padrão do backend, maior saldo primeiro) ou "nome" (A–Z).
+export type ClientQuery = { search?: string; level?: string; page?: number; order?: "saldo" | "nome" };
 
 export type ApiClientList = {
   total: number;
@@ -62,8 +63,8 @@ export type ApiClientList = {
   }[];
 };
 
-export async function fetchClients({ search, level, page }: ClientQuery): Promise<ClientList> {
-  const data = await request<ApiClientList>(`/api/clientes/${queryString({ busca: search, nivel: level, pagina: page })}`);
+export async function fetchClients({ search, level, page, order }: ClientQuery): Promise<ClientList> {
+  const data = await request<ApiClientList>(`/api/clientes/${queryString({ busca: search, nivel: level, pagina: page, ordem: order })}`);
   return {
     total: data.total,
     page: data.pagina,
@@ -109,7 +110,7 @@ export type ApiClientProfile = {
     pontos_ganhos: number;
     pontos_resgatados: number;
   }[];
-  movimentos: { data: string; tipo: "ACUMULO" | "RESGATE" | "EXPIRACAO"; pontos: number }[];
+  movimentos: { data: string; tipo: "ACUMULO" | "RESGATE" | "EXPIRACAO"; pontos: number; avaliacao: string | null }[];
 };
 
 export async function fetchClientProfile(id: number): Promise<ClientProfile> {
@@ -145,6 +146,6 @@ export function toClientProfile(d: ApiClientProfile): ClientProfile {
       pointsEarned: c.pontos_ganhos,
       pointsRedeemed: c.pontos_resgatados,
     })),
-    movements: d.movimentos.map((m) => ({ date: m.data, type: m.tipo, points: m.pontos })),
+    movements: d.movimentos.map((m) => ({ date: m.data, type: m.tipo, points: m.pontos, review: m.avaliacao })),
   };
 }

@@ -1,13 +1,13 @@
 from decimal import Decimal
 
 from django.core.paginator import EmptyPage, Paginator
-from django.db.models import Count, Max, Q, Sum
+from django.db.models import Avg, Count, Max, Q, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from . import cpf as cpf_utils
 from . import indicadores, regras
-from .models import Caixa, Compra, FormaPagamento, ItemCompra, MovimentoPontos
+from .models import Avaliacao, Caixa, Compra, FormaPagamento, ItemCompra, MovimentoPontos
 
 Tipo = MovimentoPontos.Tipo
 
@@ -43,7 +43,12 @@ def _lotes_validos(agora):
     )
 
 
-def listar_clientes(busca="", nivel="", pagina=1, agora=None):
+# Ordens da lista de clientes. O padrão é o saldo, do maior para o menor (quem tem mais pontos primeiro);
+# o nome desempata, e o id deixa a paginação estável.
+ORDENS_DE_CLIENTES = {"saldo": ("-saldo", "nome", "id"), "nome": ("nome", "id")}
+
+
+def listar_clientes(busca="", nivel="", pagina=1, agora=None, ordem="saldo"):
     agora = agora or timezone.now()
     clientes = indicadores.pontos_12m_por_cliente(agora).annotate(
         saldo=Coalesce(Sum("movimentos__restante", filter=_lotes_validos(agora)), 0)
@@ -64,7 +69,8 @@ def listar_clientes(busca="", nivel="", pagina=1, agora=None):
         if limite is not None:
             clientes = clientes.filter(p12__lt=limite)
 
-    pagina_atual, paginacao = _paginar(clientes.order_by("nome", "id"), pagina)
+    ordenacao = ORDENS_DE_CLIENTES.get(ordem, ORDENS_DE_CLIENTES["saldo"])
+    pagina_atual, paginacao = _paginar(clientes.order_by(*ordenacao), pagina)
     ids = [c.id for c in pagina_atual]
     compras = {
         linha["cliente"]: linha
@@ -143,11 +149,19 @@ def perfil_do_cliente(cliente, agora=None):
             }
             for c in compras[:20]
         ],
+        # `avaliacao`: nome do produto quando o acúmulo veio de uma avaliação (e não de uma compra).
         "movimentos": [
-            {"data": m.data, "tipo": m.tipo, "pontos": m.pontos}
-            for m in cliente.movimentos.order_by("-data", "-id")[:30]
+            {"data": m.data, "tipo": m.tipo, "pontos": m.pontos, "avaliacao": _produto_avaliado(m)}
+            for m in cliente.movimentos.select_related("avaliacao__produto").order_by("-data", "-id")[:30]
         ],
     }
+
+
+def _produto_avaliado(movimento):
+    # getattr com padrão: sem avaliação, o acesso ao OneToOne reverso levanta RelatedObjectDoesNotExist,
+    # que é um AttributeError.
+    avaliacao = getattr(movimento, "avaliacao", None)
+    return avaliacao.produto.nome if avaliacao else None
 
 
 def _vendas_filtradas(inicio, fim, caixa, pagamento):
@@ -275,5 +289,105 @@ def painel_do_cliente(cliente, agora=None):
                 "unidades": linha["unidades"],
             }
             for linha in mais_comprados
+        ],
+    }
+
+
+# Feito com IA: tela de avaliações do cliente. "Para avaliar" são os produtos que ele comprou (no caixa ou
+# online) e ainda não avaliou, do mais recente para o mais antigo; "avaliadas" são as que já fez. As regras
+# (pontos e comentário mínimo) vão junto para o front não precisar copiá-las.
+def avaliacoes_do_cliente(cliente):
+    avaliadas = list(cliente.avaliacoes.select_related("produto", "movimento"))
+    para_avaliar = (
+        ItemCompra.objects.filter(compra__cliente=cliente)
+        .exclude(produto_id__in=[a.produto_id for a in avaliadas])
+        .values("produto__sku", "produto__nome", "produto__preco")
+        .annotate(ultima_compra=Max("compra__data"))
+        .order_by("-ultima_compra", "produto__nome")
+    )
+    return {
+        "pontos_por_avaliacao": regras.PONTOS_POR_AVALIACAO,
+        "comentario_minimo": regras.COMENTARIO_MINIMO,
+        "para_avaliar": [
+            {
+                "sku": linha["produto__sku"],
+                "nome": linha["produto__nome"],
+                "preco": float(linha["produto__preco"]),
+                "ultima_compra": linha["ultima_compra"],
+            }
+            for linha in para_avaliar
+        ],
+        "avaliadas": [
+            {
+                "sku": a.produto.sku,
+                "nome": a.produto.nome,
+                "nota": a.nota,
+                "comentario": a.comentario,
+                "data": a.criada_em,
+                "pontos": a.movimento.pontos,
+            }
+            for a in avaliadas
+        ],
+    }
+
+
+# Feito com IA: tela de avaliações do gerente. O resumo, a distribuição das notas e a nota por produto
+# consideram todas as avaliações (é o retrato do catálogo); os filtros de produto e nota valem só para
+# a lista paginada, para o gerente ler os comentários de um produto ou só as notas baixas.
+def avaliacoes_da_loja(produto="", nota="", pagina=1):
+    todas = Avaliacao.objects.all()
+    resumo = todas.aggregate(
+        total=Count("id"),
+        media=Avg("nota"),
+        pontos=Coalesce(Sum("movimento__pontos"), 0),
+    )
+    por_nota = dict(todas.values_list("nota").annotate(q=Count("id")))
+    por_produto = (
+        todas.values("produto__sku", "produto__nome")
+        .annotate(quantidade=Count("id"), media=Avg("nota"))
+        .order_by("-quantidade", "produto__nome")
+    )
+
+    lista = todas.select_related("cliente", "produto").order_by("-criada_em", "-id")
+    if produto:
+        lista = lista.filter(produto__sku=produto)
+    try:
+        nota = int(nota)
+    except (TypeError, ValueError):
+        nota = None
+    if nota is not None and regras.NOTA_MINIMA <= nota <= regras.NOTA_MAXIMA:
+        lista = lista.filter(nota=nota)
+    pagina_atual, paginacao = _paginar(lista, pagina)
+
+    return {
+        **paginacao,
+        "resumo": {
+            "total": resumo["total"],
+            "media": round(resumo["media"], 1) if resumo["media"] is not None else None,
+            "pontos": resumo["pontos"],
+        },
+        "por_nota": [
+            {"nota": n, "quantidade": por_nota.get(n, 0)}
+            for n in range(regras.NOTA_MAXIMA, regras.NOTA_MINIMA - 1, -1)
+        ],
+        "por_produto": [
+            {
+                "sku": linha["produto__sku"],
+                "nome": linha["produto__nome"],
+                "quantidade": linha["quantidade"],
+                "media": round(linha["media"], 1),
+            }
+            for linha in por_produto
+        ],
+        "avaliacoes": [
+            {
+                "id": a.id,
+                "data": a.criada_em,
+                "cliente": {"id": a.cliente.id, "nome": a.cliente.nome},
+                "produto": {"sku": a.produto.sku, "nome": a.produto.nome},
+                "nota": a.nota,
+                "comentario": a.comentario,
+            }
+            for a in pagina_atual
         ],
     }

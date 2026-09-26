@@ -52,6 +52,20 @@ class RegrasPurasTest(TestCase):
         self.assertEqual(regras.proximo_nivel(1000), ("Ouro", 4000))
         self.assertIsNone(regras.proximo_nivel(7000))
 
+    def test_avaliacao_precisa_de_nota_de_1_a_5_e_comentario_minimo(self):
+        comentario = "Confortável e bonito, recomendo."
+        self.assertIsNone(regras.problema_da_avaliacao(5, comentario))
+        self.assertIsNone(regras.problema_da_avaliacao(1, "x" * regras.COMENTARIO_MINIMO))
+        for nota in (0, 6, 4.5, True, "5", None):
+            self.assertIn("nota", regras.problema_da_avaliacao(nota, comentario))
+        # Espaços nas pontas não contam para o mínimo.
+        curto = " " * 10 + "x" * (regras.COMENTARIO_MINIMO - 1) + " " * 10
+        for texto in ("", None, curto):
+            self.assertIn("caracteres", regras.problema_da_avaliacao(4, texto))
+
+    def test_avaliacao_vale_20_pontos(self):
+        self.assertEqual(regras.PONTOS_POR_AVALIACAO, 20)
+
 
 class CpfTest(TestCase):
     def test_cpf_valido_e_invalido(self):

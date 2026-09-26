@@ -1,5 +1,5 @@
 import {
-  CircleUser, LayoutDashboard, Package, Receipt, ShoppingBag, ShoppingCart, Users, Zap, type LucideIcon,
+  CircleUser, LayoutDashboard, Package, Receipt, ShoppingBag, ShoppingCart, Star, Users, Zap, type LucideIcon,
 } from "lucide-react";
 
 // Cada tela tem uma cor própria na sidebar: o ícone sempre pintado e o fundo tingido quando ativa.
@@ -33,6 +33,7 @@ export const GRUPOS: GrupoDeRotas[] = [
       { to: "/admin/clientes", title: "Clientes", icon: Users, cor: COR.violeta },
       { to: "/admin/vendas", title: "Vendas", icon: Receipt, cor: COR.ciano },
       { to: "/admin/acoes", title: "Ações", icon: Zap, cor: COR.rosa },
+      { to: "/admin/avaliacoes", title: "Avaliações", icon: Star, cor: COR.esmeralda },
     ],
   },
 ];
@@ -55,6 +56,7 @@ export const GRUPOS_CLIENTE: GrupoDeRotas[] = [
     rotas: [
       { to: "/minha-conta", title: "Meu perfil", icon: CircleUser, cor: COR.violeta, end: true },
       { to: "/minha-conta/compras", title: "Minhas compras", icon: Package, cor: COR.ciano },
+      { to: "/minha-conta/avaliacoes", title: "Avaliações", icon: Star, cor: COR.esmeralda },
     ],
   },
 ];

@@ -170,7 +170,8 @@ export type ClientProfile = {
     pointsEarned: number;
     pointsRedeemed: number;
   }[];
-  movements: { date: string; type: "ACUMULO" | "RESGATE" | "EXPIRACAO"; points: number }[];
+  // `review`: nome do produto quando o acúmulo veio de uma avaliação (e não de uma compra).
+  movements: { date: string; type: "ACUMULO" | "RESGATE" | "EXPIRACAO"; points: number; review: string | null }[];
 };
 
 // Vendas (lista e detalhe).
@@ -229,4 +230,34 @@ export type OnlinePurchaseResult = {
   discount: number;
   pointsEarned: number;
   balance: number | null;
+};
+
+// Avaliações do cliente (Minha conta › Avaliações). As regras vêm da API (regras.py), não copiadas aqui.
+export type PendingReview = { sku: string; name: string; price: number; lastPurchase: string };
+export type Review = { sku: string; name: string; rating: number; comment: string; date: string; points: number };
+export type Reviews = {
+  pointsPerReview: number;
+  minComment: number;
+  pending: PendingReview[];
+  done: Review[];
+};
+
+// Avaliações vistas pelo gerente (/admin/avaliacoes). Resumo e notas por produto são do catálogo todo;
+// os filtros (produto, nota) valem só para a lista.
+export type StoreReview = {
+  id: number;
+  date: string;
+  client: { id: number; name: string };
+  product: { sku: string; name: string };
+  rating: number;
+  comment: string;
+};
+export type StoreReviews = {
+  total: number;
+  page: number;
+  pages: number;
+  summary: { total: number; average: number | null; points: number };
+  byRating: { rating: number; count: number }[];
+  byProduct: { sku: string; name: string; count: number; average: number }[];
+  reviews: StoreReview[];
 };

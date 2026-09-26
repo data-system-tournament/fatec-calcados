@@ -6,8 +6,6 @@ import ClientePerfil from "../pages/clientes/ClientePerfil";
 import Clientes from "../pages/clientes/Clientes";
 import Checkout from "../pages/conta/Checkout";
 import Loja from "../pages/conta/Loja";
-import MeusDados from "../pages/conta/MeusDados";
-import MeusPontos from "../pages/conta/MeusPontos";
 import MinhaConta from "../pages/conta/MinhaConta";
 import MinhasCompras from "../pages/conta/MinhasCompras";
 import Dashboard from "../pages/dashboard/Dashboard";
@@ -37,8 +35,9 @@ export const router = createBrowserRouter([
       { path: "loja/carrinho", element: <Checkout /> },
       { path: "minha-conta", element: <MinhaConta /> },
       { path: "minha-conta/compras", element: <MinhasCompras /> },
-      { path: "minha-conta/pontos", element: <MeusPontos /> },
-      { path: "minha-conta/dados", element: <MeusDados /> },
+      // Pontos e dados agora são seções da Minha conta; os endereços antigos levam até elas.
+      { path: "minha-conta/pontos", element: <Navigate to="/minha-conta#pontos" replace /> },
+      { path: "minha-conta/dados", element: <Navigate to="/minha-conta#dados" replace /> },
     ],
   },
   // Área da loja (PDV e gestão): fica em /admin e só se chega digitando o endereço; a landing só leva

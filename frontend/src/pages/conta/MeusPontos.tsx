@@ -3,12 +3,10 @@ import { Link } from "react-router-dom";
 import { Card, CardTitle } from "../../components/ui/Card";
 import { corDoNivel } from "../../components/ui/corDoNivel";
 import { hintClass } from "../../components/ui/styles";
-import { useConta } from "../../contexts/conta";
 import { formatDay, formatMoney, formatNumber } from "../../utils/format";
+import type { ClientDashboard } from "../../types";
 import { TONS } from "../dashboard/tons";
-import { Indicador, ProgressoDoNivel } from "./pecas";
-
-const MOVIMENTOS = { ACUMULO: "Ganhou", RESGATE: "Usou", EXPIRACAO: "Venceram" };
+import { Indicador } from "./pecas";
 
 // Copiado de regras.py (NIVEIS): pontos acumulados em 12 meses para chegar ao nível e o bônus. Mude junto.
 const NIVEIS = [
@@ -17,12 +15,9 @@ const NIVEIS = [
   { nome: "Ouro", minimo: 5000, bonus: 20 },
 ];
 
-// "Minha conta › Meus pontos": o equivalente às "moedas" das lojas online. Saldo, validade por lote,
-// nível e extrato, com as regras explicadas em uma linha cada.
-function MeusPontos() {
-  const { account } = useConta();
-  if (!account) return null;
-
+// Aba "Pontos" do Meu perfil: o equivalente às "moedas" das lojas online. Saldo, validade por lote e
+// nível, com as regras explicadas em uma linha cada. O extrato fica na aba ao lado (Extrato.tsx).
+function MeusPontos({ account }: { account: ClientDashboard }) {
   return (
     <div className="flex flex-col gap-4">
       {account.expiring.points > 0 && account.expiring.nextDate && (
@@ -50,8 +45,7 @@ function MeusPontos() {
       <section className="grid grid-cols-2 gap-4 *:min-w-0 max-[1000px]:grid-cols-[minmax(0,1fr)]">
         <Card className="p-[18px]">
           <CardTitle>Seu nível · {account.level}</CardTitle>
-          <ProgressoDoNivel account={account} />
-          <ul className="mt-4 flex flex-col">
+          <ul className="flex flex-col">
             {NIVEIS.map((nivel) => (
               <li
                 key={nivel.nome}
@@ -86,27 +80,6 @@ function MeusPontos() {
           )}
         </Card>
       </section>
-
-      <Card className="p-[18px]">
-        <CardTitle>Extrato</CardTitle>
-        {account.movements.length === 0 ? (
-          <p className={hintClass}>Seus pontos aparecem aqui depois da primeira compra.</p>
-        ) : (
-          <ul className="max-h-96 overflow-auto pr-2">
-            {account.movements.map((movimento, index) => (
-              <li key={`${movimento.date}-${index}`} className="flex justify-between border-b border-line py-2 text-[13px] first:pt-0 last:border-0 last:pb-0">
-                <span>
-                  {MOVIMENTOS[movimento.type]}
-                  <small className="ml-2 text-xs text-faint">{formatDay(movimento.date)}</small>
-                </span>
-                <b className={`font-semibold tabular-nums ${movimento.points > 0 ? "text-ok" : "text-danger"}`}>
-                  {movimento.points > 0 ? "+" : "−"}{formatNumber(Math.abs(movimento.points))}
-                </b>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
     </div>
   );
 }

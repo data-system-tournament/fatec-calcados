@@ -9,7 +9,7 @@ import type { ClientDashboard } from "../../types";
 import { formatMoney, formatNumber } from "../../utils/format";
 import { TONS, type Tom } from "../dashboard/tons";
 
-// Peças usadas em mais de uma tela da área do cliente (Produtos, Resumo, Meus pontos).
+// Peças usadas em mais de uma tela da área do cliente (Produtos e Meu perfil).
 
 export function Indicador({ tom, icone, rotulo, valor, detalhe }: {
   tom: Tom;

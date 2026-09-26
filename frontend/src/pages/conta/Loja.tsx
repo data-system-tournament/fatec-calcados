@@ -33,7 +33,7 @@ function Loja() {
     <div className="flex flex-col gap-4">
       {account && (
         <Link
-          to="/minha-conta/pontos"
+          to="/minha-conta#pontos"
           className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[10px] border border-app/20 bg-app-soft px-4 py-3 text-[13.5px] transition-colors hover:border-app/40"
         >
           <Coins size={18} className="flex-none text-app" aria-hidden />

@@ -1,14 +1,11 @@
 import { Card, CardTitle } from "../../components/ui/Card";
 import { hintClass } from "../../components/ui/styles";
-import { useConta } from "../../contexts/conta";
+import type { ClientDashboard } from "../../types";
 import { formatDay } from "../../utils/format";
 
-// "Minha conta › Meus dados": dados pessoais só para leitura (o cadastro vem do caixa). Por enquanto o
+// Aba "Meus dados" do Meu perfil: dados pessoais só para leitura (o cadastro vem do caixa). Por enquanto o
 // cliente não altera nada por aqui; o backend já tem POST /api/conta/senha/ para quando a troca de senha voltar.
-function MeusDados() {
-  const { account } = useConta();
-  if (!account) return null;
-
+function MeusDados({ account }: { account: ClientDashboard }) {
   return (
     <Card className="max-w-xl p-[18px]">
       <CardTitle>Dados pessoais</CardTitle>

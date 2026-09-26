@@ -20,7 +20,7 @@ function ClientePerfil() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link to="/clientes" className="inline-flex items-center gap-1.5 self-start text-[13px] font-medium text-muted hover:text-ink">
+      <Link to="/admin/clientes" className="inline-flex items-center gap-1.5 self-start text-[13px] font-medium text-muted hover:text-ink">
         <ArrowLeft size={14} /> Clientes
       </Link>
 

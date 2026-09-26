@@ -17,28 +17,28 @@ export function passosDoTour(): PassoTour[] {
       texto: `Encontre qualquer tela ou cliente em segundos. Atalho: ${atalhoBusca()}.`,
     },
     {
-      alvo: "/pdv",
+      alvo: "/admin/pdv",
       titulo: "PDV / Caixa",
       texto:
         "Registre vendas, identifique o cliente e use os pontos no pagamento. Se a conexão cair, as vendas ficam numa fila e são enviadas quando ela volta.",
     },
     {
-      alvo: "/dashboard",
+      alvo: "/admin/dashboard",
       titulo: "Dashboard",
       texto: "Os números do programa por período: vendas, pontos e clientes.",
     },
     {
-      alvo: "/clientes",
+      alvo: "/admin/clientes",
       titulo: "Clientes",
       texto: "A lista de clientes com nível e saldo de pontos. Abra um cliente para ver o perfil completo.",
     },
     {
-      alvo: "/vendas",
+      alvo: "/admin/vendas",
       titulo: "Vendas",
       texto: "O histórico de vendas, com o detalhe de cada uma.",
     },
     {
-      alvo: "/acoes",
+      alvo: "/admin/acoes",
       titulo: "Ações",
       texto: "Listas de ações para a gestão. Marque as que você já fez; o número no menu mostra quantas ainda estão pendentes.",
     },

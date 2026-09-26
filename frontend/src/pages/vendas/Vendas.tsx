@@ -122,7 +122,7 @@ function Vendas() {
                       </td>
                       <td className={tdClass}>
                         {sale.client
-                          ? <Link to={`/clientes/${sale.client.id}`} className="underline-offset-[3px] hover:underline">{sale.client.name}</Link>
+                          ? <Link to={`/admin/clientes/${sale.client.id}`} className="underline-offset-[3px] hover:underline">{sale.client.name}</Link>
                           : <span className="text-muted">Sem CPF</span>}
                       </td>
                       <td className={tdClass}>{sale.register ?? "—"}</td>

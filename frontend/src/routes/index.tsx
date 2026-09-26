@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import ClienteLayout from "../layouts/ClienteLayout";
 import MainLayout from "../layouts/MainLayout";
 import Actions from "../pages/acoes/Actions";
@@ -41,12 +41,16 @@ export const router = createBrowserRouter([
       { path: "minha-conta/dados", element: <MeusDados /> },
     ],
   },
+  // Área da loja (PDV e gestão): fica em /admin e só se chega digitando o endereço; a landing só leva
+  // o cliente para /login e /cadastro. Não confundir com o admin do Django (porta 8000).
   {
+    path: "admin",
     element: <MainLayout />,
     children: [
       {
         errorElement: <RouteError />,
         children: [
+          { index: true, element: <Navigate to="dashboard" replace /> },
           { path: "pdv", element: <Pdv /> },
           { path: "dashboard", element: <Dashboard /> },
           { path: "clientes", element: <Clientes /> },
@@ -58,4 +62,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  // Qualquer outro endereço volta para a landing, sem abrir o layout da loja.
+  { path: "*", element: <Navigate to="/" replace /> },
 ]);

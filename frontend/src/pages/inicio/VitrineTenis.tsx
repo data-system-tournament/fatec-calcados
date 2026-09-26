@@ -62,10 +62,10 @@ export default function VitrineTenis({ topo }: { topo: ReactNode }) {
           </p>
           <div className="landing-sobe mt-10 flex flex-wrap items-center gap-x-8 gap-y-4" style={{ "--i": 2 } as CSSProperties}>
             <Link
-              to="/pdv"
+              to="/cadastro"
               className="inline-flex items-center gap-2 rounded-full bg-(--h-tinta) px-7 py-4 text-[15px] font-semibold text-(--h-fundo) shadow-[0_12px_28px_-10px_rgb(0_0_0/.45)] transition-[background-color,color] delay-[300ms] duration-[350ms] hover:gap-3"
             >
-              Abrir o PDV <ArrowRight size={18} aria-hidden />
+              Criar minha conta <ArrowRight size={18} aria-hidden />
             </Link>
             <a href="#como-funciona" className="text-[15px] font-medium underline-offset-4 hover:underline">
               Como funciona

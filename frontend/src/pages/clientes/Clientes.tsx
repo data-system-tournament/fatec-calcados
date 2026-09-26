@@ -110,7 +110,7 @@ function Clientes() {
                   {data.clients.map((client) => (
                     <tr key={client.id} className="hover:bg-subtle">
                       <td className={tdClass}>
-                        <Link to={`/clientes/${client.id}`} className="font-medium underline-offset-[3px] hover:underline">{client.name}</Link>
+                        <Link to={`/admin/clientes/${client.id}`} className="font-medium underline-offset-[3px] hover:underline">{client.name}</Link>
                       </td>
                       <td className={tdClass}>{client.cpf}</td>
                       <td className={tdClass}><LevelBadge level={client.level} /></td>

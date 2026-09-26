@@ -102,9 +102,6 @@ function Cabecalho() {
           <span className="hidden min-[440px]:inline">FATECalçados</span>
         </Link>
         <nav className="flex items-center gap-5 text-[14px] font-medium sm:gap-6">
-          <Link to="/dashboard" className="underline-offset-4 hover:underline max-sm:hidden">
-            Área da loja
-          </Link>
           <Link to="/login" className="underline-offset-4 hover:underline">
             Entrar
           </Link>
@@ -377,19 +374,20 @@ function Chamada() {
         className="absolute inset-y-0 left-[38%] z-[1] hidden w-[18%] bg-[linear-gradient(90deg,var(--l-osso),transparent)] lg:block"
       />
       <div className={`${container} relative z-10`}>
-        <h2 className={`${titulo} max-w-[12ch]`}>Comece pelo caixa.</h2>
+        <h2 className={`${titulo} max-w-[12ch]`}>Comece a juntar pontos.</h2>
         <p className="mt-6 max-w-[34ch] text-[17px] text-(--l-cinza-texto)">
-          O cadastro sai na primeira compra, só com o CPF. Os pontos já entram na mesma compra.
+          Crie sua conta com o CPF para ver seus pontos e comprar na loja online. Já comprou no caixa? Use o
+          mesmo CPF e seus pontos aparecem lá.
         </p>
         <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
           <Link
-            to="/pdv"
+            to="/cadastro"
             className="inline-flex items-center gap-2 rounded-full bg-(--l-vinho) px-7 py-4 text-[15px] font-semibold text-white shadow-[0_12px_28px_-10px_rgb(143_13_13/.6)] transition-[gap,background-color] duration-200 hover:gap-3 hover:bg-[#a31212]"
           >
-            Abrir o PDV <ArrowRight size={18} aria-hidden />
+            Criar minha conta <ArrowRight size={18} aria-hidden />
           </Link>
-          <Link to="/dashboard" className="text-[15px] font-medium underline-offset-4 hover:underline">
-            Ver o dashboard
+          <Link to="/login" className="text-[15px] font-medium underline-offset-4 hover:underline">
+            Já tenho conta
           </Link>
         </div>
       </div>

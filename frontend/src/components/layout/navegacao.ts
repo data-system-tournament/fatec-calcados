@@ -23,16 +23,16 @@ export type GrupoDeRotas = { heading?: string; rotas: Rota[] };
 export const GRUPOS: GrupoDeRotas[] = [
   {
     rotas: [
-      { to: "/pdv", title: "PDV / Caixa", icon: ShoppingBag, cor: COR.laranja },
-      { to: "/dashboard", title: "Dashboard", icon: LayoutDashboard, cor: COR.azul },
+      { to: "/admin/pdv", title: "PDV / Caixa", icon: ShoppingBag, cor: COR.laranja },
+      { to: "/admin/dashboard", title: "Dashboard", icon: LayoutDashboard, cor: COR.azul },
     ],
   },
   {
     heading: "Gestão",
     rotas: [
-      { to: "/clientes", title: "Clientes", icon: Users, cor: COR.violeta },
-      { to: "/vendas", title: "Vendas", icon: Receipt, cor: COR.ciano },
-      { to: "/acoes", title: "Ações", icon: Zap, cor: COR.rosa },
+      { to: "/admin/clientes", title: "Clientes", icon: Users, cor: COR.violeta },
+      { to: "/admin/vendas", title: "Vendas", icon: Receipt, cor: COR.ciano },
+      { to: "/admin/acoes", title: "Ações", icon: Zap, cor: COR.rosa },
     ],
   },
 ];
@@ -64,7 +64,7 @@ export function atalhoBusca(): string {
   return /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘ K" : "Ctrl K";
 }
 
-// "/clientes/12" também é a tela Clientes. Vence a rota mais específica: "/minha-conta/compras" é Minhas compras,
+// "/admin/clientes/12" também é a tela Clientes. Vence a rota mais específica: "/minha-conta/compras" é Minhas compras,
 // não "Resumo".
 export function tituloDaRota(pathname: string, grupos: GrupoDeRotas[] = GRUPOS): string {
   const candidatas = grupos

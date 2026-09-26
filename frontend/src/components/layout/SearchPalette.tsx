@@ -42,7 +42,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
         section: "Clientes",
         label: c.name,
         hint: `${c.cpf} · ${c.level} · ${formatNumber(c.points)} pts`,
-        to: `/clientes/${c.id}`,
+        to: `/admin/clientes/${c.id}`,
       }))
     : [];
   const results = [...pages, ...clients];

@@ -4,12 +4,12 @@ import { Link, useParams } from "react-router-dom";
 import { Card, CardTitle } from "../../components/ui/Card";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { LevelBadge } from "../../components/ui/LevelBadge";
-import { hintClass, tdClass, thClass } from "../../components/ui/styles";
+import { colunaSecundaria, quebraNoCelular, hintClass, tdClass, thClass } from "../../components/ui/styles";
 import { paymentLabel } from "../../config";
 import { useCarregar } from "../../hooks/useCarregar";
 import { fetchClientProfile } from "../../services/api";
 import type { ClientProfile } from "../../types";
-import { formatDay, formatDateTime, formatMoney, formatNumber } from "../../utils/format";
+import { formatDate, formatDay, formatDateTime, formatMoney, formatNumber } from "../../utils/format";
 import SaleDetailModal from "../vendas/SaleDetailModal";
 
 const MOVEMENT_LABELS = { ACUMULO: "Acúmulo", RESGATE: "Resgate", EXPIRACAO: "Expiração" };
@@ -44,6 +44,14 @@ function Perfil({ client }: { client: ClientProfile }) {
           <p className="mt-1 text-[13px] text-muted">
             CPF {client.cpf} · cliente desde {formatDay(client.registeredAt)}
             {client.registeredStore && ` · cadastrado na ${client.registeredStore}`}
+          </p>
+          {/* O que o próprio cliente informou na área dele (opcional): tamanho, aniversário e autorização de ofertas. */}
+          <p className="mt-0.5 text-[13px] text-muted">
+            {client.shoeSize ? `Calça ${client.shoeSize}` : "Numeração não informada"}
+            {" · "}
+            {client.birthDate ? `aniversário em ${formatDate(client.birthDate).slice(0, 5)}` : "aniversário não informado"}
+            {" · "}
+            {client.contactConsentAt ? `aceita ofertas desde ${formatDay(client.contactConsentAt)}` : "não autorizou ofertas"}
           </p>
         </div>
         <LevelProgress client={client} />
@@ -102,8 +110,8 @@ function Perfil({ client }: { client: ClientProfile }) {
               <thead>
                 <tr>
                   <th className={`${thClass} text-left`}>Data</th>
-                  <th className={`${thClass} text-left`}>Caixa</th>
-                  <th className={`${thClass} text-left`}>Pagamento</th>
+                  <th className={`${thClass} text-left ${colunaSecundaria}`}>Caixa</th>
+                  <th className={`${thClass} text-left ${colunaSecundaria}`}>Pagamento</th>
                   <th className={`${thClass} text-right`}>Valor pago</th>
                   <th className={`${thClass} text-right`}>Pontos</th>
                 </tr>
@@ -111,7 +119,7 @@ function Perfil({ client }: { client: ClientProfile }) {
               <tbody className="[&>tr:last-child>td]:border-b-0">
                 {client.purchases.map((purchase) => (
                   <tr key={purchase.id} className="hover:bg-subtle">
-                    <td className={tdClass}>
+                    <td className={`${tdClass} ${quebraNoCelular}`}>
                       <button
                         className="font-medium underline-offset-[3px] hover:underline"
                         onClick={() => setOpenSaleId(purchase.id)}
@@ -120,8 +128,8 @@ function Perfil({ client }: { client: ClientProfile }) {
                         {formatDateTime(purchase.date)}
                       </button>
                     </td>
-                    <td className={tdClass}>{purchase.register ?? "—"}</td>
-                    <td className={tdClass}>{paymentLabel(purchase.payment)}</td>
+                    <td className={`${tdClass} ${colunaSecundaria}`}>{purchase.register ?? "—"}</td>
+                    <td className={`${tdClass} ${colunaSecundaria}`}>{paymentLabel(purchase.payment)}</td>
                     <td className={`${tdClass} text-right`}>{formatMoney(purchase.paid)}</td>
                     <td className={`${tdClass} text-right`}>
                       {purchase.pointsEarned > 0 && <span className="text-ok">+{formatNumber(purchase.pointsEarned)}</span>}

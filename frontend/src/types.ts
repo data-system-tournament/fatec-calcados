@@ -148,6 +148,11 @@ export type ClientProfile = {
   cpf: string;
   registeredAt: string;
   registeredStore: string | null;
+  // Preenchidos pelo cliente no perfil (opcionais). `birthDate` é "AAAA-MM-DD"; `contactConsentAt` é
+  // quando ele autorizou receber ofertas (null = não autorizou).
+  shoeSize: number | null;
+  birthDate: string | null;
+  contactConsentAt: string | null;
   level: string;
   bonusPercent: number;
   points12m: number;
@@ -209,11 +214,16 @@ export type SaleDetail = Omit<SaleListItem, "itemCount"> & {
 
 // Área do cliente: o perfil + o que o próprio cliente quer ver no painel dele.
 export type ClientDashboard = ClientProfile & {
+  // Produtos comprados que faltam avaliar, os pontos que rendem e a compra mais recente entre eles.
+  pendingReviews: { count: number; points: number; lastPurchase: string | null };
   levelProgress: number;
   expiring: { days: number; points: number; nextDate: string | null };
   savings: number;
   topProducts: (Product & { units: number })[];
 };
+
+// O que o cliente altera no perfil (os outros dados vêm do cadastro da loja).
+export type ProfileUpdate = { shoeSize: number | null; birthDate: string | null; acceptsContact: boolean };
 
 export type OnlinePayment = "PIX" | "CREDITO";
 

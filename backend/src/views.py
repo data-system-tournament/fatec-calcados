@@ -336,6 +336,32 @@ def api_conta_senha(request):
     return JsonResponse({})
 
 
+# POST {numeracao, nascimento: "AAAA-MM-DD", aceita_contato}: dados que o cliente completa no perfil.
+# Numeração e nascimento vazios (null ou "") apagam o que havia. Responde com o painel atualizado.
+@require_POST
+def api_conta_perfil(request):
+    cliente = _cliente_logado(request)
+    if cliente is None:
+        return _sem_sessao()
+    try:
+        dados = _ler_json(request)
+        nascimento = dados.get("nascimento") or None
+        if nascimento is not None:
+            try:
+                nascimento = date.fromisoformat(nascimento)
+            except (TypeError, ValueError):
+                return _erro("Confira a data de nascimento.")
+        services.atualizar_perfil(
+            cliente,
+            numeracao=dados.get("numeracao") if dados.get("numeracao") != "" else None,
+            nascimento=nascimento,
+            aceita_contato=dados.get("aceita_contato"),
+        )
+    except services.RegraViolada as e:
+        return _erro(str(e))
+    return JsonResponse(consultas.painel_do_cliente(cliente))
+
+
 # GET: produtos para avaliar e avaliações feitas. POST {sku, nota, comentario}: avalia e ganha os pontos;
 # responde com a lista já atualizada.
 @require_http_methods(["GET", "POST"])

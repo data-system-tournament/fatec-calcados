@@ -1,4 +1,4 @@
-import type { ClientDashboard, OnlinePurchase, OnlinePurchaseResult, Reviews, SaleDetail } from "../../types";
+import type { ClientDashboard, OnlinePurchase, OnlinePurchaseResult, ProfileUpdate, Reviews, SaleDetail } from "../../types";
 import { toClientProfile, type ApiClientProfile } from "./clientes";
 import { ApiError, ensureCsrfCookie, request } from "./http";
 import { toSaleDetail, type ApiSaleDetail } from "./vendas";
@@ -6,15 +6,21 @@ import { toSaleDetail, type ApiSaleDetail } from "./vendas";
 // Área do cliente (/api/conta/, com sessão).
 
 export type ApiClientDashboard = ApiClientProfile & {
+  avaliacoes_pendentes: { quantidade: number; pontos: number; ultima_compra: string | null };
   progresso_nivel: number;
   a_vencer: { dias: number; pontos: number; proxima_data: string | null };
   economia: number;
   mais_comprados: { sku: string; nome: string; preco: number; unidades: number }[];
 };
 
-function toClientDashboard(d: ApiClientDashboard): ClientDashboard {
+export function toClientDashboard(d: ApiClientDashboard): ClientDashboard {
   return {
     ...toClientProfile(d),
+    pendingReviews: {
+      count: d.avaliacoes_pendentes.quantidade,
+      points: d.avaliacoes_pendentes.pontos,
+      lastPurchase: d.avaliacoes_pendentes.ultima_compra,
+    },
     levelProgress: d.progresso_nivel,
     expiring: { days: d.a_vencer.dias, points: d.a_vencer.pontos, nextDate: d.a_vencer.proxima_data },
     savings: d.economia,
@@ -52,6 +58,16 @@ export async function createAccess(cpf: string, name: string, password: string):
 
 export async function signOut(): Promise<void> {
   await request("/api/conta/sair/", { method: "POST" });
+}
+
+// Numeração, nascimento e autorização de contato. Devolve o painel já atualizado.
+export async function updateProfile(profile: ProfileUpdate): Promise<ClientDashboard> {
+  return toClientDashboard(
+    await request<ApiClientDashboard>("/api/conta/perfil/", {
+      method: "POST",
+      body: { numeracao: profile.shoeSize, nascimento: profile.birthDate, aceita_contato: profile.acceptsContact },
+    }),
+  );
 }
 
 export async function buyOnline(purchase: OnlinePurchase): Promise<OnlinePurchaseResult> {

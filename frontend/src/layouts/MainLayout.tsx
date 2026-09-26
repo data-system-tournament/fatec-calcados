@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useMatch } from "react-router-dom";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { PainelAcessibilidade } from "../components/layout/PainelAcessibilidade";
+import { PainelAjuda } from "../components/layout/PainelAjuda";
 import { SearchPalette } from "../components/layout/SearchPalette";
 import { Sidebar, StatusDoCaixa, type AvisoDaRota } from "../components/layout/Sidebar";
 import { tituloDaRota, type Rota } from "../components/layout/navegacao";
@@ -45,6 +46,7 @@ function Shell() {
   const { pathname } = useLocation();
   const [searching, setSearching] = useState(false);
   const [ajustando, setAjustando] = useState(false);
+  const [ajuda, setAjuda] = useState(false);
   const sidebar = useSidebar();
   const title = tituloDaRota(pathname);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -105,6 +107,7 @@ function Shell() {
           onSearch={handleSearch}
           onNavigate={sidebar.mobile ? sidebar.close : undefined}
           onTour={tour.iniciar}
+          onAjuda={() => setAjuda(true)}
           onAcessibilidade={() => setAjustando(true)}
         />
       </aside>
@@ -145,6 +148,7 @@ function Shell() {
 
       {/* No celular a gaveta fica aberta por baixo: é nela que o foco volta quando o painel fecha. */}
       {ajustando && <PainelAcessibilidade onClose={() => setAjustando(false)} />}
+      {ajuda && <PainelAjuda publico="loja" onClose={() => setAjuda(false)} />}
 
       {tour.ativo && (
         <TourGuiado

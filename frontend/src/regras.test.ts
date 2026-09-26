@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estimatePoints, maxRedeemPoints, pointsToMoney } from "./regras";
+import { estimatePoints, maxRedeemPoints, NIVEIS, pointsToMoney, REVIEW_POINTS, VALIDITY_MONTHS } from "./regras";
 
 // Espelham as regras de backend/src/regras.py: se um número mudar lá, estes testes avisam aqui.
 describe("regras do cliente (prévia do PDV)", () => {
@@ -24,6 +24,12 @@ describe("regras do cliente (prévia do PDV)", () => {
   it("o resgate máximo é limitado pelo saldo, em blocos de 100 pontos", () => {
     expect(maxRedeemPoints(1800, 349.9)).toBe(1800);
     expect(maxRedeemPoints(250, 349.9)).toBe(200);
+  });
+
+  it("níveis, validade e avaliação iguais aos de regras.py", () => {
+    expect(NIVEIS.map((n) => [n.nome, n.minimo, n.bonus])).toEqual([["Bronze", 0, 0], ["Prata", 1000, 10], ["Ouro", 5000, 20]]);
+    expect(VALIDITY_MONTHS).toBe(12);
+    expect(REVIEW_POINTS).toBe(20);
   });
 
   it("o resgate máximo não deixa o desconto passar do valor da compra", () => {

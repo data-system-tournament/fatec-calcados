@@ -82,3 +82,18 @@ def problema_da_avaliacao(nota, comentario) -> str | None:
     if not isinstance(comentario, str) or len(comentario.strip()) < COMENTARIO_MINIMO:
         return f"Conte um pouco mais sobre o produto: pelo menos {COMENTARIO_MINIMO} caracteres."
     return None
+
+
+# Feito com IA: dados que o cliente completa no perfil, os dois opcionais. A numeração cobre do infantil
+# ao adulto na tabela brasileira; o nascimento não pode ser no futuro nem de alguém com mais de 120 anos.
+NUMERACAO_MINIMA, NUMERACAO_MAXIMA = 16, 48
+IDADE_MAXIMA = 120
+
+
+# Devolve o motivo de os dados não valerem, ou None. `nascimento` já chega como date (ou None).
+def problema_do_perfil(numeracao, nascimento, hoje) -> str | None:
+    if numeracao is not None and (type(numeracao) is not int or not NUMERACAO_MINIMA <= numeracao <= NUMERACAO_MAXIMA):
+        return f"Escolha uma numeração de {NUMERACAO_MINIMA} a {NUMERACAO_MAXIMA}."
+    if nascimento is not None and (nascimento > hoje or nascimento.year < hoje.year - IDADE_MAXIMA):
+        return "Confira a data de nascimento."
+    return None

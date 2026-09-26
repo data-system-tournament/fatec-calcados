@@ -101,8 +101,9 @@ function Checkout() {
           <CardTitle>Itens · {itemCount}</CardTitle>
           <ul>
             {lines.map((line) => (
-              <li key={line.sku} className="flex items-center gap-3 border-b border-line py-3 text-[13.5px] first:pt-0 last:border-0 last:pb-0">
-                <span className="min-w-0 flex-1">
+              // No celular o nome ocupa a linha de cima e os controles descem, para o nome não virar "Tênis R...".
+              <li key={line.sku} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line py-3 text-[13.5px] first:pt-0 last:border-0 last:pb-0">
+                <span className="min-w-0 flex-1 max-[520px]:basis-full">
                   <span className="block truncate font-medium">{line.product.name}</span>
                   <small className="text-xs text-muted">{formatMoney(line.product.price)} un.</small>
                 </span>
@@ -116,7 +117,7 @@ function Checkout() {
                     <Plus size={13} aria-hidden />
                   </Button>
                 </span>
-                <b className="w-24 text-right font-semibold tabular-nums">{formatMoney(line.product.price * line.quantity)}</b>
+                <b className="w-24 text-right font-semibold tabular-nums max-[520px]:ml-auto">{formatMoney(line.product.price * line.quantity)}</b>
                 <button
                   className="grid size-7 place-items-center rounded-md text-faint hover:bg-subtle hover:text-danger"
                   aria-label={`Remover ${line.product.name}`}

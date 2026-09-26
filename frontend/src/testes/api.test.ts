@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { REGISTER_CODE } from "../config";
 import {
   buyOnline, fetchAccount, fetchReviews, fetchStoreReviews, fetchActions, fetchClient, fetchClientProfile, fetchClients, fetchDashboard,
-  fetchProducts, fetchSaleDetail, fetchSales, registerClient, sendReview, sendSale, signIn,
+  fetchProducts, fetchSaleDetail, fetchSales, registerClient, sendReview, sendSale, signIn, updateProfile,
 } from "../services/api";
 import type { Sale } from "../types";
 import { chamada, simularApi } from "./apiFalsa";
@@ -204,6 +204,19 @@ describe("área do cliente", () => {
     const painel = await fetchAccount();
     expect(painel).toMatchObject({ name: "Ana Souza", points: 1270, levelProgress: 32, savings: 50 });
     expect(painel?.expiring).toEqual({ days: 60, points: 713, nextDate: "2026-11-02" });
+    expect(painel?.pendingReviews).toEqual({ count: 1, points: 20, lastPurchase: "2026-09-20T15:10:00-03:00" });
+    expect(painel).toMatchObject({ shoeSize: 37, birthDate: "1992-10-14", contactConsentAt: "2026-09-01T18:30:00-03:00" });
+  });
+
+  it("salva numeração, nascimento e autorização com os nomes da API", async () => {
+    const fetch = simularApi([{ corpo: painelDoClienteApi }]);
+    const painel = await updateProfile({ shoeSize: 37, birthDate: "1992-10-14", acceptsContact: true });
+    expect(chamada(fetch)).toMatchObject({
+      url: "/api/conta/perfil/",
+      method: "POST",
+      body: { numeracao: 37, nascimento: "1992-10-14", aceita_contato: true },
+    });
+    expect(painel.shoeSize).toBe(37);
   });
 
   it("sem cookie CSRF, o login busca o cookie antes de entrar", async () => {

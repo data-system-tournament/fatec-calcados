@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Coins, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { PainelAcessibilidade } from "../components/layout/PainelAcessibilidade";
+import { PainelAjuda } from "../components/layout/PainelAjuda";
 import { Sidebar, type AvisoDaRota } from "../components/layout/Sidebar";
 import { GRUPOS_CLIENTE, tituloDaRota, type Rota } from "../components/layout/navegacao";
 import { ErrorState } from "../components/ui/ErrorState";
@@ -10,8 +11,10 @@ import { hintClass } from "../components/ui/styles";
 import { useConta } from "../contexts/conta";
 import { ContaProvider } from "../contexts/ContaProvider";
 import { ToastProvider } from "../contexts/ToastProvider";
+import { useNotificacoes } from "../hooks/useNotificacoes";
 import { useSidebar } from "../hooks/useSidebar";
 import { useTituloDaRota } from "../hooks/useTituloDaRota";
+import { PainelNotificacoes } from "../pages/conta/PainelNotificacoes";
 import type { ClientDashboard } from "../types";
 import { formatNumber, plural } from "../utils/format";
 
@@ -32,16 +35,7 @@ const asideDesktop = "sticky top-0 h-dvh flex-none self-start border-r border-li
 const asideMobile = "fixed inset-y-0 left-0 z-40 w-[260px] border-r border-line bg-surface shadow-pop transition-transform duration-300";
 
 function Shell() {
-  const { account, loading, error, reload, signOut, cart } = useConta();
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const [ajustando, setAjustando] = useState(false);
-  const sidebar = useSidebar();
-  const title = tituloDaRota(pathname, GRUPOS_CLIENTE);
-  const secao = pathname.startsWith("/minha-conta") ? "Minha conta" : "Loja online";
-  const titleRef = useRef<HTMLHeadingElement>(null);
-
-  useTituloDaRota(title, titleRef);
+  const { account, loading, error, reload } = useConta();
 
   if (loading) {
     return <p className={`${hintClass} p-6`} role="status">Carregando sua conta...</p>;
@@ -54,6 +48,25 @@ function Shell() {
     );
   }
   if (!account) return <Navigate to="/login" replace />;
+  return <ShellLogado account={account} />;
+}
+
+// Só monta com a sessão carregada: as notificações (e o "lido" de cada uma) são do cliente logado.
+function ShellLogado({ account }: { account: ClientDashboard }) {
+  const { signOut, cart } = useConta();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [ajustando, setAjustando] = useState(false);
+  const [ajuda, setAjuda] = useState(false);
+  // As que eram novas quando o painel abriu: continuam marcadas enquanto ele estiver aberto.
+  const [avisosNovos, setAvisosNovos] = useState<string[] | null>(null);
+  const avisos = useNotificacoes(account);
+  const sidebar = useSidebar();
+  const title = tituloDaRota(pathname, GRUPOS_CLIENTE);
+  const secao = pathname.startsWith("/minha-conta") ? "Minha conta" : "Loja online";
+  const titleRef = useRef<HTMLHeadingElement>(null);
+
+  useTituloDaRota(title, titleRef);
 
   let itensNoCarrinho = 0;
   for (const item of cart) itensNoCarrinho += item.quantity;
@@ -93,7 +106,16 @@ function Shell() {
           subtitulo="Área do cliente"
           avisoDaRota={avisoDaRota}
           status={(collapsed) => <StatusDoCliente account={account} collapsed={collapsed} />}
+          notificacoes={{
+            naoLidas: avisos.naoLidas.length,
+            onAbrir: () => {
+              if (sidebar.mobile) sidebar.close();
+              setAvisosNovos(avisos.naoLidas);
+              avisos.marcarComoLidas();
+            },
+          }}
           onNavigate={sidebar.mobile ? sidebar.close : undefined}
+          onAjuda={() => setAjuda(true)}
           onAcessibilidade={() => setAjustando(true)}
           onSair={sair}
         />
@@ -130,6 +152,10 @@ function Shell() {
       </div>
 
       {ajustando && <PainelAcessibilidade onClose={() => setAjustando(false)} />}
+      {ajuda && <PainelAjuda publico="cliente" onClose={() => setAjuda(false)} />}
+      {avisosNovos && (
+        <PainelNotificacoes notificacoes={avisos.notificacoes} novas={avisosNovos} onClose={() => setAvisosNovos(null)} />
+      )}
     </div>
   );
 }

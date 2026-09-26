@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.test import Client, TestCase
 from django.utils import timezone
 
-from src import services
+from src import regras, services
 from src.models import Caixa, Compra, Loja, MovimentoPontos, Produto
 
 SENHA = "sapato-azul-2026"
@@ -175,3 +175,48 @@ class ContaTest(TestCase):
         self.assertEqual([p["sku"] for p in painel["mais_comprados"]], ["7890002", "7890001"])
         self.assertEqual(painel["cpf"], "***.982.247-**")
         self.assertEqual(MovimentoPontos.objects.filter(tipo="EXPIRACAO").count(), 0)
+
+    def test_perfil_guarda_numeracao_nascimento_e_quando_autorizou_contato(self):
+        self.criar_acesso()
+        r = self.post("/api/conta/perfil/", {"numeracao": 39, "nascimento": "1994-03-12", "aceita_contato": True})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual((r.json()["numeracao"], r.json()["nascimento"]), (39, "1994-03-12"))
+        self.mariana.refresh_from_db()
+        autorizado = self.mariana.contato_autorizado_em
+        self.assertIsNotNone(autorizado)
+
+        # Salvar de novo com a autorização marcada mantém a data original (prova do consentimento).
+        self.post("/api/conta/perfil/", {"numeracao": 40, "nascimento": "1994-03-12", "aceita_contato": True})
+        self.mariana.refresh_from_db()
+        self.assertEqual((self.mariana.numeracao, self.mariana.contato_autorizado_em), (40, autorizado))
+
+        # Desmarcar apaga a autorização; campos vazios apagam numeração e nascimento.
+        self.post("/api/conta/perfil/", {"numeracao": "", "nascimento": "", "aceita_contato": False})
+        self.mariana.refresh_from_db()
+        self.assertEqual(
+            (self.mariana.numeracao, self.mariana.nascimento, self.mariana.contato_autorizado_em), (None, None, None)
+        )
+
+    def test_perfil_invalido_da_400_e_nao_grava(self):
+        self.criar_acesso()
+        for dados in (
+            {"numeracao": 60, "nascimento": None, "aceita_contato": False},
+            {"numeracao": 39, "nascimento": "12/03/1994", "aceita_contato": False},
+            {"numeracao": 39, "nascimento": "2999-01-01", "aceita_contato": False},
+            {"numeracao": 39, "nascimento": None, "aceita_contato": "sim"},
+        ):
+            self.assertEqual(self.post("/api/conta/perfil/", dados).status_code, 400)
+        self.mariana.refresh_from_db()
+        self.assertIsNone(self.mariana.numeracao)
+        self.assertEqual(self.post("/api/conta/perfil/", {}, client=Client()).status_code, 401)
+
+    def test_painel_conta_os_produtos_que_faltam_avaliar(self):
+        self.criar_acesso()
+        vazio = self.client.get("/api/conta/").json()["avaliacoes_pendentes"]
+        self.assertEqual(vazio, {"quantidade": 0, "pontos": 0, "ultima_compra": None})
+
+        self.comprar(itens=[{"sku": "7890001", "quantidade": 1}, {"sku": "7890002", "quantidade": 2}])
+        services.avaliar_produto(self.mariana, "7890002", 5, "Meia macia e não esquenta o pé.")
+        pendentes = self.client.get("/api/conta/").json()["avaliacoes_pendentes"]
+        self.assertEqual((pendentes["quantidade"], pendentes["pontos"]), (1, regras.PONTOS_POR_AVALIACAO))
+        self.assertIsNotNone(pendentes["ultima_compra"])

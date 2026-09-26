@@ -1,13 +1,17 @@
+import { Footprints } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Abas } from "../../components/ui/Abas";
+import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { LevelBadge } from "../../components/ui/LevelBadge";
 import { useConta } from "../../contexts/conta";
 import type { ClientDashboard } from "../../types";
 import { formatDay } from "../../utils/format";
+import { TONS } from "../dashboard/tons";
 import Extrato from "./Extrato";
 import MeusDados from "./MeusDados";
 import MeusPontos from "./MeusPontos";
+import { dadosFaltando } from "./notificacoes";
 import { ProgressoDoNivel } from "./pecas";
 
 const ABAS = [
@@ -24,6 +28,7 @@ function MinhaConta() {
   const { account } = useConta();
   const [aba, trocarAba] = useAbaNaUrl();
   if (!account) return null;
+  const faltando = dadosFaltando(account);
 
   return (
     <div className="flex flex-col gap-5">
@@ -46,6 +51,16 @@ function MinhaConta() {
           <ProgressoDoNivel account={account} />
         </div>
       </Card>
+
+      {faltando && aba !== "dados" && (
+        <div className={`flex flex-wrap items-center gap-3 rounded-[10px] border px-4 py-3 text-[13.5px] ${TONS.violeta.painel}`}>
+          <Footprints size={18} className={`flex-none ${TONS.violeta.icone}`} aria-hidden />
+          <span className="min-w-0 flex-1">
+            <b className="font-semibold">Complete seu perfil:</b> informe {faltando} para receber ofertas feitas para você.
+          </span>
+          <Button size="sm" variant="dark" onClick={() => trocarAba("dados")}>Completar</Button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
         <Abas abas={ABAS} valor={aba} onChange={trocarAba} rotulo="Seções do perfil" idBase="perfil" />

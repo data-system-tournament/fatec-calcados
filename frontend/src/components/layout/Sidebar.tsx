@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { CircleHelp, House, LogOut, PersonStanding, Search } from "lucide-react";
+import { Bell, BookOpen, CircleHelp, House, LogOut, PersonStanding, Search } from "lucide-react";
 import { REGISTER_NAME, STORE_NAME } from "../../config";
 import { useCaixa } from "../../contexts/caixa";
 import { plural } from "../../utils/format";
@@ -22,16 +22,19 @@ const itemInativo = "text-muted hover:bg-subtle hover:text-ink";
 // border-line no lugar de card/foreground, sem classes dark:, e NavLink no lugar do estado interno).
 // `collapsed` é a "rail": só os ícones, com o nome em title/aria-label; a sidebar nunca sai da tela.
 // A mesma sidebar serve à loja (padrão) e à área do cliente: quem monta passa as rotas, o subtítulo,
-// os avisos de cada rota, o bloco de status do rodapé e só as ações que existem naquele layout.
+// os avisos de cada rota, o bloco de status do rodapé e só as ações que existem naquele layout
+// (a busca só na loja; o sino de notificações só na área do cliente).
 export function Sidebar({
   collapsed = false,
   grupos = GRUPOS,
   subtitulo = STORE_NAME,
   avisoDaRota,
   status,
+  notificacoes,
   onSearch,
   onNavigate,
   onTour,
+  onAjuda,
   onAcessibilidade,
   onSair,
 }: {
@@ -40,9 +43,11 @@ export function Sidebar({
   subtitulo?: string;
   avisoDaRota?: (rota: Rota) => AvisoDaRota | undefined;
   status?: (collapsed: boolean) => ReactNode;
+  notificacoes?: { naoLidas: number; onAbrir: () => void };
   onSearch?: () => void;
   onNavigate?: () => void;
   onTour?: () => void;
+  onAjuda: () => void;
   onAcessibilidade: () => void;
   onSair?: () => void;
 }) {
@@ -64,6 +69,9 @@ export function Sidebar({
         {grupos.map((grupo, index) => (
           <div key={grupo.heading ?? index} className="flex flex-col gap-0.5">
             {index === 0 && onSearch && <SearchButton collapsed={collapsed} itemClass={itemClass} onClick={onSearch} />}
+            {index === 0 && notificacoes && (
+              <BotaoNotificacoes collapsed={collapsed} itemClass={itemClass} {...notificacoes} />
+            )}
             {grupo.heading &&
               (collapsed ? (
                 <hr className="mx-2 mb-1 border-line" aria-hidden="true" />
@@ -86,6 +94,17 @@ export function Sidebar({
 
       <div className="mt-auto flex flex-col gap-0.5 border-t border-line pt-4">
         {status?.(collapsed)}
+        <button
+          type="button"
+          onClick={onAjuda}
+          data-tour="ajuda"
+          title={collapsed ? "Como funcionam os pontos" : undefined}
+          aria-label={collapsed ? "Como funcionam os pontos" : undefined}
+          aria-haspopup="dialog"
+          className={`${itemClass} ${itemInativo}`}
+        >
+          <ItemBody icon={BookOpen} title="Como funcionam os pontos" active={false} collapsed={collapsed} />
+        </button>
         <button
           type="button"
           onClick={onAcessibilidade}
@@ -182,6 +201,35 @@ function SearchButton({ collapsed, itemClass, onClick }: { collapsed: boolean; i
         active={false}
         collapsed={collapsed}
         trailing={<Kbd className="hidden group-hover:inline-block">{atalhoBusca()}</Kbd>}
+      />
+    </button>
+  );
+}
+
+// Sino da área do cliente: abre o painel de notificações e mostra quantas ainda não foram vistas.
+function BotaoNotificacoes({ collapsed, itemClass, naoLidas, onAbrir }: {
+  collapsed: boolean;
+  itemClass: string;
+  naoLidas: number;
+  onAbrir: () => void;
+}) {
+  const label = naoLidas > 0 ? `Notificações (${naoLidas} ${plural(naoLidas, "nova", "novas")})` : "Notificações";
+  return (
+    <button
+      type="button"
+      onClick={onAbrir}
+      title={collapsed ? label : undefined}
+      aria-label={label}
+      aria-haspopup="dialog"
+      className={`${itemClass} ${itemInativo}`}
+    >
+      <ItemBody
+        icon={Bell}
+        title="Notificações"
+        active={false}
+        collapsed={collapsed}
+        alert={naoLidas > 0}
+        trailing={naoLidas > 0 && <Pill tone="warn">{naoLidas}</Pill>}
       />
     </button>
   );

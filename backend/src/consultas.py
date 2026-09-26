@@ -123,6 +123,9 @@ def perfil_do_cliente(cliente, agora=None):
         "cpf": cpf_utils.mascarar(cliente.cpf),
         "cadastrado_em": cliente.cadastrado_em,
         "loja_cadastro": cliente.loja_cadastro.nome if cliente.loja_cadastro else None,
+        "numeracao": cliente.numeracao,
+        "nascimento": cliente.nascimento,
+        "contato_autorizado_em": cliente.contato_autorizado_em,
         "nivel": nivel,
         "nivel_nome": regras.nome_do_nivel(nivel),
         "bonus_percentual": regras.bonus_do_nivel(nivel),
@@ -272,8 +275,18 @@ def painel_do_cliente(cliente, agora=None):
         .order_by("-unidades", "produto__nome")[:3]
     )
 
+    # Para as notificações do cliente: quantos produtos comprados esperam avaliação e a compra mais
+    # recente entre eles (uma compra nova faz o aviso voltar como não lido).
+    para_avaliar = _para_avaliar(cliente)
+    pendentes = para_avaliar.count()
+
     return {
         **perfil,
+        "avaliacoes_pendentes": {
+            "quantidade": pendentes,
+            "pontos": pendentes * regras.PONTOS_POR_AVALIACAO,
+            "ultima_compra": para_avaliar[0]["ultima_compra"] if pendentes else None,
+        },
         "progresso_nivel": progresso,
         "a_vencer": {
             "dias": DIAS_A_VENCER,
@@ -293,18 +306,24 @@ def painel_do_cliente(cliente, agora=None):
     }
 
 
+# Produtos que o cliente comprou (no caixa ou online) e ainda não avaliou, do mais recente para o mais antigo.
+def _para_avaliar(cliente):
+    avaliados = Avaliacao.objects.filter(cliente=cliente).values("produto_id")
+    return (
+        ItemCompra.objects.filter(compra__cliente=cliente)
+        .exclude(produto_id__in=avaliados)
+        .values("produto__sku", "produto__nome", "produto__preco")
+        .annotate(ultima_compra=Max("compra__data"))
+        .order_by("-ultima_compra", "produto__nome")
+    )
+
+
 # Feito com IA: tela de avaliações do cliente. "Para avaliar" são os produtos que ele comprou (no caixa ou
 # online) e ainda não avaliou, do mais recente para o mais antigo; "avaliadas" são as que já fez. As regras
 # (pontos e comentário mínimo) vão junto para o front não precisar copiá-las.
 def avaliacoes_do_cliente(cliente):
     avaliadas = list(cliente.avaliacoes.select_related("produto", "movimento"))
-    para_avaliar = (
-        ItemCompra.objects.filter(compra__cliente=cliente)
-        .exclude(produto_id__in=[a.produto_id for a in avaliadas])
-        .values("produto__sku", "produto__nome", "produto__preco")
-        .annotate(ultima_compra=Max("compra__data"))
-        .order_by("-ultima_compra", "produto__nome")
-    )
+    para_avaliar = _para_avaliar(cliente)
     return {
         "pontos_por_avaliacao": regras.PONTOS_POR_AVALIACAO,
         "comentario_minimo": regras.COMENTARIO_MINIMO,

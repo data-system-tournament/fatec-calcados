@@ -4,6 +4,8 @@ import { perfilDoClienteApi } from "./clientes";
 // Painel da área do cliente: o perfil mais o progresso de nível, pontos a vencer e economia.
 export const painelDoClienteApi: ApiClientDashboard = {
   ...perfilDoClienteApi,
+  // A meia de avaliacoesApi, logo abaixo.
+  avaliacoes_pendentes: { quantidade: 1, pontos: 20, ultima_compra: "2026-09-20T15:10:00-03:00" },
   progresso_nivel: 32,
   a_vencer: { dias: 60, pontos: 713, proxima_data: "2026-11-02" },
   economia: 50,

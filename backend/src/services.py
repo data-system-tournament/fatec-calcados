@@ -329,6 +329,27 @@ def alterar_senha(cliente: Cliente, senha_atual, nova_senha):
     return usuario
 
 
+# Feito com IA: numeração, nascimento e autorização de contato, preenchidos pelo cliente no perfil. A
+# autorização guarda QUANDO foi dada (prova pedida pela LGPD): marcar de novo não muda a data, e
+# desmarcar apaga, porque o cliente desistiu.
+def atualizar_perfil(cliente: Cliente, numeracao, nascimento, aceita_contato, agora=None) -> Cliente:
+    agora = agora or timezone.now()
+    problema = regras.problema_do_perfil(numeracao, nascimento, timezone.localdate(agora))
+    if problema:
+        raise RegraViolada(problema)
+    if type(aceita_contato) is not bool:
+        raise RegraViolada("Diga se aceita ou não receber ofertas.")
+
+    cliente.numeracao = numeracao
+    cliente.nascimento = nascimento
+    if not aceita_contato:
+        cliente.contato_autorizado_em = None
+    elif cliente.contato_autorizado_em is None:
+        cliente.contato_autorizado_em = agora
+    cliente.save(update_fields=["numeracao", "nascimento", "contato_autorizado_em"])
+    return cliente
+
+
 # Feito com IA: avaliação de produto com pontos. Ordem: trava o cliente (dois envios ao mesmo tempo não
 # rendem pontos em dobro) -> produto existe -> o cliente comprou o produto (no caixa ou online) -> ainda
 # não avaliou -> nota e comentário válidos (regras.problema_da_avaliacao) -> grava o lote de pontos e a

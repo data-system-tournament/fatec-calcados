@@ -88,6 +88,9 @@ export type ApiClientProfile = {
   cpf: string;
   cadastrado_em: string;
   loja_cadastro: string | null;
+  numeracao: number | null;
+  nascimento: string | null;
+  contato_autorizado_em: string | null;
   nivel_nome: string;
   bonus_percentual: number;
   pontos_12m: number;
@@ -124,6 +127,9 @@ export function toClientProfile(d: ApiClientProfile): ClientProfile {
     cpf: d.cpf,
     registeredAt: d.cadastrado_em,
     registeredStore: d.loja_cadastro,
+    shoeSize: d.numeracao,
+    birthDate: d.nascimento,
+    contactConsentAt: d.contato_autorizado_em,
     level: d.nivel_nome,
     bonusPercent: d.bonus_percentual,
     points12m: d.pontos_12m,

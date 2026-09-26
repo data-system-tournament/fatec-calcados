@@ -1,5 +1,5 @@
 import random
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -65,6 +65,16 @@ class RegrasPurasTest(TestCase):
 
     def test_avaliacao_vale_20_pontos(self):
         self.assertEqual(regras.PONTOS_POR_AVALIACAO, 20)
+
+    def test_perfil_aceita_numeracao_de_16_a_48_e_nascimento_plausivel(self):
+        hoje = date(2026, 9, 26)
+        self.assertIsNone(regras.problema_do_perfil(None, None, hoje))
+        self.assertIsNone(regras.problema_do_perfil(16, date(1990, 5, 3), hoje))
+        self.assertIsNone(regras.problema_do_perfil(48, hoje, hoje))
+        for numeracao in (15, 49, 38.5, True, "38"):
+            self.assertIn("numeração", regras.problema_do_perfil(numeracao, None, hoje))
+        for nascimento in (date(2026, 9, 27), date(1905, 1, 1)):
+            self.assertIn("nascimento", regras.problema_do_perfil(40, nascimento, hoje))
 
 
 class CpfTest(TestCase):

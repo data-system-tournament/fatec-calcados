@@ -17,6 +17,7 @@ urlpatterns = [
     path("api/conta/entrar/", views.api_conta_entrar, name="api_conta_entrar"),
     path("api/conta/sair/", views.api_conta_sair, name="api_conta_sair"),
     path("api/conta/senha/", views.api_conta_senha, name="api_conta_senha"),
+    path("api/conta/perfil/", views.api_conta_perfil, name="api_conta_perfil"),
     path("api/conta/compras/", views.api_conta_compras, name="api_conta_compras"),
     path("api/conta/compras/<uuid:compra_id>/", views.api_conta_compra_detalhe, name="api_conta_compra_detalhe"),
     path("api/conta/avaliacoes/", views.api_conta_avaliacoes, name="api_conta_avaliacoes"),

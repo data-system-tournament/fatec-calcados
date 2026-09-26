@@ -65,6 +65,12 @@ class Cliente(models.Model):
     usuario = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="cliente"
     )
+    # Preenchidos pelo próprio cliente no perfil (opcionais): servem para ofertas do tamanho dele e para
+    # campanhas de aniversário.
+    numeracao = models.PositiveSmallIntegerField("numeração do calçado", null=True, blank=True)
+    nascimento = models.DateField("data de nascimento", null=True, blank=True)
+    # LGPD: quando o cliente autorizou receber ofertas. Vazio = não autorizou (ou desistiu).
+    contato_autorizado_em = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["nome"]

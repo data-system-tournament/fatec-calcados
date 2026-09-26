@@ -48,7 +48,8 @@ function PointsChart({ data }: { data: DashboardData["monthly"] }) {
         </ul>
       </div>
 
-      <table className="sr-only">
+      {/* top-0 left-0: sem isso a tabela (1px, absoluta) ficava na borda direita e dava 1px de rolagem lateral em 320px. */}
+      <table className="sr-only top-0 left-0">
         <caption>Pontos por mês</caption>
         <thead>
           <tr>

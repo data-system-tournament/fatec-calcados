@@ -53,6 +53,11 @@ export function passosDoTour(): PassoTour[] {
       texto: "Mostra se este caixa está conectado. Offline, as vendas continuam sendo registradas e ficam pendentes até a conexão voltar.",
     },
     {
+      alvo: "ajuda",
+      titulo: "Como funcionam os pontos",
+      texto: "Resumo das regras do programa: quanto o cliente ganha em cada compra, os níveis, o resgate e a validade. Útil para tirar dúvidas no balcão.",
+    },
+    {
       alvo: "acessibilidade",
       titulo: "Aparência e acessibilidade",
       texto: "Escolha o tema claro, escuro ou do sistema, aumente a letra, ligue o alto contraste e mais. As escolhas ficam salvas neste navegador.",

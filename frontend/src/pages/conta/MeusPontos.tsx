@@ -3,17 +3,12 @@ import { Link } from "react-router-dom";
 import { Card, CardTitle } from "../../components/ui/Card";
 import { corDoNivel } from "../../components/ui/corDoNivel";
 import { hintClass } from "../../components/ui/styles";
+import { NIVEIS } from "../../regras";
 import { formatDay, formatMoney, formatNumber } from "../../utils/format";
 import type { ClientDashboard } from "../../types";
 import { TONS } from "../dashboard/tons";
 import { Indicador } from "./pecas";
 
-// Copiado de regras.py (NIVEIS): pontos acumulados em 12 meses para chegar ao nível e o bônus. Mude junto.
-const NIVEIS = [
-  { nome: "Bronze", minimo: 0, bonus: 0 },
-  { nome: "Prata", minimo: 1000, bonus: 10 },
-  { nome: "Ouro", minimo: 5000, bonus: 20 },
-];
 
 // Aba "Pontos" do Meu perfil: o equivalente às "moedas" das lojas online. Saldo, validade por lote e
 // nível, com as regras explicadas em uma linha cada. O extrato fica na aba ao lado (Extrato.tsx).
@@ -51,13 +46,18 @@ function MeusPontos({ account }: { account: ClientDashboard }) {
                 key={nivel.nome}
                 className={`flex items-center justify-between border-b border-line py-2 text-[13px] last:border-0 ${nivel.nome === account.level ? "font-semibold" : "text-muted"}`}
               >
-                <span className="flex items-center gap-2">
-                  <span className={`size-2 rounded-full ${corDoNivel(nivel.nome)}`} aria-hidden />
-                  {nivel.nome}
-                  {nivel.nome === account.level && <small className="text-xs font-normal text-faint">(você)</small>}
+                {/* A exigência vai embaixo do nome (e não numa coluna do meio) para caber no celular sem quebrar. */}
+                <span className="flex min-w-0 flex-col">
+                  <span className="flex items-center gap-2">
+                    <span className={`size-2 rounded-full ${corDoNivel(nivel.nome)}`} aria-hidden />
+                    {nivel.nome}
+                    {nivel.nome === account.level && <small className="text-xs font-normal text-faint">(você)</small>}
+                  </span>
+                  <small className="pl-4 text-xs font-normal text-muted">
+                    {nivel.minimo === 0 ? "desde a 1ª compra" : `${formatNumber(nivel.minimo)} pts em 12 meses`}
+                  </small>
                 </span>
-                <span>{nivel.minimo === 0 ? "desde a 1ª compra" : `${formatNumber(nivel.minimo)} pts em 12 meses`}</span>
-                <span className="w-24 text-right">{nivel.bonus > 0 ? `+${nivel.bonus}% pontos` : "1 pt por real"}</span>
+                <span className="flex-none text-right">{nivel.bonus > 0 ? `+${nivel.bonus}% pontos` : "1 pt por real"}</span>
               </li>
             ))}
           </ul>

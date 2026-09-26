@@ -8,5 +8,5 @@ export { fetchActions } from "./acoes";
 export { fetchStoreReviews, type StoreReviewQuery } from "./avaliacoes";
 export { fetchDashboard } from "./dashboard";
 export {
-  fetchAccount, signIn, createAccess, signOut, buyOnline, fetchAccountPurchase, fetchReviews, sendReview,
+  fetchAccount, signIn, createAccess, signOut, updateProfile, buyOnline, fetchAccountPurchase, fetchReviews, sendReview,
 } from "./conta";

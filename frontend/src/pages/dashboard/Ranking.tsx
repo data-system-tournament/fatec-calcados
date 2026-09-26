@@ -2,7 +2,7 @@ import { Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { LevelBadge } from "../../components/ui/LevelBadge";
-import { hintClass, tdClass, thClass } from "../../components/ui/styles";
+import { colunaSecundaria, hintClass, quebraNoCelular, tdClass, thClass } from "../../components/ui/styles";
 import type { RankingRow } from "../../types";
 import { formatDate, formatNumber } from "../../utils/format";
 import CardHeading from "./CardHeading";
@@ -32,10 +32,10 @@ function Ranking({ ranking, end }: RankingProps) {
               <tr>
                 <th className={`${thClass} text-left`}>#</th>
                 <th className={`${thClass} text-left`}>Cliente</th>
-                <th className={`${thClass} text-left`}>CPF</th>
+                <th className={`${thClass} text-left ${colunaSecundaria}`}>CPF</th>
                 <th className={`${thClass} text-left`}>Nível</th>
                 <th className={`${thClass} text-right`}>Acumulado</th>
-                <th className={`${thClass} text-right`}>Saldo em {formatDate(end)}</th>
+                <th className={`${thClass} text-right ${colunaSecundaria}`}>Saldo em {formatDate(end)}</th>
               </tr>
             </thead>
             <tbody className="[&>tr:last-child>td]:border-b-0">
@@ -46,13 +46,13 @@ function Ranking({ ranking, end }: RankingProps) {
                       {row.position}
                     </span>
                   </td>
-                  <td className={tdClass}>
+                  <td className={`${tdClass} ${quebraNoCelular}`}>
                     <Link to={`/admin/clientes/${row.id}`} className="font-medium underline-offset-[3px] hover:underline">{row.name}</Link>
                   </td>
-                  <td className={tdClass}>{row.cpf}</td>
+                  <td className={`${tdClass} ${colunaSecundaria}`}>{row.cpf}</td>
                   <td className={tdClass}><LevelBadge level={row.level} /></td>
                   <td className={`${tdClass} text-right`}>{formatNumber(row.earned)}</td>
-                  <td className={`${tdClass} text-right`}>{formatNumber(row.balance)}</td>
+                  <td className={`${tdClass} text-right ${colunaSecundaria}`}>{formatNumber(row.balance)}</td>
                 </tr>
               ))}
             </tbody>

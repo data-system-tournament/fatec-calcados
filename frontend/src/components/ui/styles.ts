@@ -12,3 +12,8 @@ export const hintClass = "mt-2 text-[13px] text-muted";
 // Tabelas de dados (Ranking, Clientes, Vendas).
 export const thClass = "border-b border-line px-2.5 pb-2 text-xs font-medium whitespace-nowrap text-muted";
 export const tdClass = "border-b border-line px-2.5 py-[9px] whitespace-nowrap";
+// Coluna que some no celular (< 640px) para as principais caberem sem rolar de lado; o detalhe da linha
+// continua mostrando tudo. Vai junto no <th> e no <td> da mesma coluna.
+export const colunaSecundaria = "max-[640px]:hidden";
+// Célula que pode quebrar linha no celular (ex.: "26/09/2026 15:06" vira data em cima e hora embaixo).
+export const quebraNoCelular = "max-[640px]:whitespace-normal";

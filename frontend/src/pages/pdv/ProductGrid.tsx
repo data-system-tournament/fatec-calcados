@@ -9,10 +9,11 @@ const chipBase = "rounded-full border px-3 py-1 text-[12.5px] font-medium transi
 const chipAtivo = "border-ink bg-ink text-surface";
 const chipInativo = "border-line-2 bg-surface text-ink-2 hover:border-faint";
 
-// O PDV usa uma grade compacta (o caixa clica rápido); a loja online, cards maiores de vitrine.
+// O PDV usa uma grade compacta (o caixa clica rápido); a loja online, cards maiores de vitrine. No celular
+// as duas ficam em 2 colunas, como nas lojas online: com uma só, cada card ocupava a tela inteira.
 const grades = {
-  pdv: "grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-2",
-  loja: "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4",
+  pdv: "grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-2 max-[520px]:grid-cols-2",
+  loja: "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 max-[520px]:grid-cols-2 max-[520px]:gap-3",
 };
 
 type ProductGridProps = {

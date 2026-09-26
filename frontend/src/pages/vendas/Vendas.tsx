@@ -3,14 +3,15 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { Pagination } from "../../components/ui/Pagination";
-import { hintClass, inputClass, tdClass, thClass } from "../../components/ui/styles";
+import { colunaSecundaria, quebraNoCelular, hintClass, inputClass, tdClass, thClass } from "../../components/ui/styles";
 import { paymentLabel } from "../../config";
 import { useCarregar } from "../../hooks/useCarregar";
 import { fetchSales } from "../../services/api";
 import { formatDateTime, formatMoney, formatNumber } from "../../utils/format";
 import SaleDetailModal from "./SaleDetailModal";
 
-const selectClass = `${inputClass} py-[5px] text-[12.5px]`;
+// max-w-full: o nome dos caixas é longo ("Caixa 01 · FATECalçados Americana") e alargava o filtro no celular.
+const selectClass = `${inputClass} max-w-full py-[5px] text-[12.5px]`;
 
 // Feito com IA: os filtros e a página ficam na URL (/vendas?pagamento=PIX&pagina=2), como no dashboard,
 // então dá para recarregar ou mandar o link sem perder a lista.
@@ -55,7 +56,7 @@ function Vendas() {
         <label className="flex flex-col gap-[3px] text-xs text-muted">
           Até <input type="date" className={selectClass} value={end} onChange={onSelect("fim")} />
         </label>
-        <label className="flex flex-col gap-[3px] text-xs text-muted">
+        <label className="flex max-w-full min-w-0 flex-col gap-[3px] text-xs text-muted">
           Caixa
           <select className={selectClass} value={register} onChange={onSelect("caixa")}>
             <option value="">Todos</option>
@@ -101,35 +102,35 @@ function Vendas() {
                   <tr>
                     <th className={`${thClass} text-left`}>Data</th>
                     <th className={`${thClass} text-left`}>Cliente</th>
-                    <th className={`${thClass} text-left`}>Caixa</th>
-                    <th className={`${thClass} text-left`}>Pagamento</th>
-                    <th className={`${thClass} text-right`}>Itens</th>
+                    <th className={`${thClass} text-left ${colunaSecundaria}`}>Caixa</th>
+                    <th className={`${thClass} text-left ${colunaSecundaria}`}>Pagamento</th>
+                    <th className={`${thClass} text-right ${colunaSecundaria}`}>Itens</th>
                     <th className={`${thClass} text-right`}>Valor pago</th>
-                    <th className={`${thClass} text-right`}>Pontos</th>
+                    <th className={`${thClass} text-right ${colunaSecundaria}`}>Pontos</th>
                   </tr>
                 </thead>
                 <tbody className="[&>tr:last-child>td]:border-b-0">
                   {data.sales.map((sale) => (
                     <tr key={sale.id} className="hover:bg-subtle">
-                      <td className={tdClass}>
+                      <td className={`${tdClass} ${quebraNoCelular}`}>
                         <button
-                          className="font-medium underline-offset-[3px] hover:underline"
+                          className="text-left font-medium underline-offset-[3px] hover:underline"
                           onClick={() => setOpenId(sale.id)}
                           aria-label={`Ver venda de ${formatDateTime(sale.date)}`}
                         >
                           {formatDateTime(sale.date)}
                         </button>
                       </td>
-                      <td className={tdClass}>
+                      <td className={`${tdClass} ${quebraNoCelular}`}>
                         {sale.client
                           ? <Link to={`/admin/clientes/${sale.client.id}`} className="underline-offset-[3px] hover:underline">{sale.client.name}</Link>
                           : <span className="text-muted">Sem CPF</span>}
                       </td>
-                      <td className={tdClass}>{sale.register ?? "—"}</td>
-                      <td className={tdClass}>{paymentLabel(sale.payment)}</td>
-                      <td className={`${tdClass} text-right`}>{sale.itemCount}</td>
+                      <td className={`${tdClass} ${colunaSecundaria}`}>{sale.register ?? "—"}</td>
+                      <td className={`${tdClass} ${colunaSecundaria}`}>{paymentLabel(sale.payment)}</td>
+                      <td className={`${tdClass} text-right ${colunaSecundaria}`}>{sale.itemCount}</td>
                       <td className={`${tdClass} text-right`}>{formatMoney(sale.paid)}</td>
-                      <td className={`${tdClass} text-right`}>
+                      <td className={`${tdClass} text-right ${colunaSecundaria}`}>
                         {sale.pointsEarned > 0 && <span className="text-ok">+{formatNumber(sale.pointsEarned)}</span>}
                         {sale.pointsRedeemed > 0 && <span className="ml-1.5 text-danger">−{formatNumber(sale.pointsRedeemed)}</span>}
                         {sale.pointsEarned === 0 && sale.pointsRedeemed === 0 && <span className="text-muted">—</span>}

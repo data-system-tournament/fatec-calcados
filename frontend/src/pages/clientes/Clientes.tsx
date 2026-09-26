@@ -5,7 +5,7 @@ import { Card } from "../../components/ui/Card";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { LevelBadge } from "../../components/ui/LevelBadge";
 import { Pagination } from "../../components/ui/Pagination";
-import { hintClass, inputClass, tdClass, thClass } from "../../components/ui/styles";
+import { colunaSecundaria, hintClass, inputClass, tdClass, thClass } from "../../components/ui/styles";
 import { useCarregar } from "../../hooks/useCarregar";
 import { useDebounce } from "../../hooks/useDebounce";
 import { fetchClients } from "../../services/api";
@@ -111,11 +111,11 @@ function Clientes() {
                 <thead>
                   <tr>
                     <ColunaOrdenavel ordem="nome" atual={order} onOrdenar={setOrder} alinhamento="text-left">Cliente</ColunaOrdenavel>
-                    <th className={`${thClass} text-left`}>CPF</th>
+                    <th className={`${thClass} text-left ${colunaSecundaria}`}>CPF</th>
                     <th className={`${thClass} text-left`}>Nível</th>
                     <ColunaOrdenavel ordem="saldo" atual={order} onOrdenar={setOrder} alinhamento="text-right">Saldo</ColunaOrdenavel>
-                    <th className={`${thClass} text-right`}>Compras</th>
-                    <th className={`${thClass} text-right`}>Última compra</th>
+                    <th className={`${thClass} text-right ${colunaSecundaria}`}>Compras</th>
+                    <th className={`${thClass} text-right ${colunaSecundaria}`}>Última compra</th>
                   </tr>
                 </thead>
                 <tbody className="[&>tr:last-child>td]:border-b-0">
@@ -124,11 +124,11 @@ function Clientes() {
                       <td className={tdClass}>
                         <Link to={`/admin/clientes/${client.id}`} className="font-medium underline-offset-[3px] hover:underline">{client.name}</Link>
                       </td>
-                      <td className={tdClass}>{client.cpf}</td>
+                      <td className={`${tdClass} ${colunaSecundaria}`}>{client.cpf}</td>
                       <td className={tdClass}><LevelBadge level={client.level} /></td>
                       <td className={`${tdClass} text-right`}>{formatNumber(client.points)} pts</td>
-                      <td className={`${tdClass} text-right`}>{client.purchases}</td>
-                      <td className={`${tdClass} text-right`}>{client.lastPurchase ? formatDay(client.lastPurchase) : <span className="text-muted">—</span>}</td>
+                      <td className={`${tdClass} text-right ${colunaSecundaria}`}>{client.purchases}</td>
+                      <td className={`${tdClass} text-right ${colunaSecundaria}`}>{client.lastPurchase ? formatDay(client.lastPurchase) : <span className="text-muted">—</span>}</td>
                     </tr>
                   ))}
                 </tbody>

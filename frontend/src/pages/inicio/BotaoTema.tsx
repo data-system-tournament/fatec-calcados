@@ -1,7 +1,7 @@
 import { Moon, Sun } from "lucide-react";
 import { useTema } from "../../hooks/useTema";
 
-// Feito com IA: troca claro/escuro na landing e nas telas de acesso. Um clique fixa o tema oposto ao que
+// Feito com IA: troca claro/escuro nas telas de acesso (/login, /cadastro). Um clique fixa o tema oposto ao que
 // está na tela; a escolha é a mesma do seletor da sidebar (`fatec:tema`), então vale para o site todo.
 export function BotaoTema() {
   const { escuro, setTema } = useTema();

@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { BotaoTema } from "./BotaoTema";
 
 // Moldura comum de /login e /cadastro: cartão dividido, painel da marca à esquerda e formulário
-// à direita. Mesma paleta da landing (classe .landing), clara ou escura conforme o tema.
+// à direita. Base da paleta da landing (classe .landing), mas clara ou escura conforme o tema (.landing-acesso).
 
 type TelaAcessoProps = {
   titulo: string;
@@ -25,7 +25,7 @@ export function TelaAcesso({ titulo, subtitulo, botao, onSubmit, erro, enviando 
   }
 
   return (
-    <div className="landing flex min-h-svh flex-col px-4 sm:px-8">
+    <div className="landing landing-acesso flex min-h-svh flex-col px-4 sm:px-8">
       <header className="flex h-20 items-center justify-between">
         <Link to="/" className="inline-flex items-center gap-2 text-[14px] text-(--l-texto-2) transition-colors hover:text-(--l-texto)">
           <ArrowLeft size={16} aria-hidden /> Voltar

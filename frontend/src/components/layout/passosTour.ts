@@ -47,5 +47,10 @@ export function passosDoTour(): PassoTour[] {
       titulo: "Status do caixa",
       texto: "Mostra se este caixa está conectado. Offline, as vendas continuam sendo registradas e ficam pendentes até a conexão voltar.",
     },
+    {
+      alvo: "acessibilidade",
+      titulo: "Acessibilidade",
+      texto: "Aumente a letra, ligue o alto contraste, reduza as animações e mais. As escolhas ficam salvas neste navegador.",
+    },
   ];
 }

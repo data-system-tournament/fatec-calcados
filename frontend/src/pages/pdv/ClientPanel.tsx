@@ -100,7 +100,7 @@ function ClientPanel({ client, onSelect, onClear, onRegistered }: ClientPanelPro
       {status === "typing" && !error && (
         <small className="block text-[12.5px] text-muted">Informe o CPF para o cliente ganhar pontos. Sem CPF, a venda sai sem pontos.</small>
       )}
-      {status === "searching" && <small className="text-[13px] text-muted">Procurando cliente...</small>}
+      {status === "searching" && <small className="text-[13px] text-muted" role="status">Procurando cliente...</small>}
 
       {status === "found" && found && (
         <Button variant="dark" size="sm" className="w-full" onClick={() => onSelect(found)}>
@@ -110,7 +110,7 @@ function ClientPanel({ client, onSelect, onClear, onRegistered }: ClientPanelPro
 
       {status === "notFound" && (
         <div className="flex flex-col gap-2">
-          <small className="text-xs text-muted">CPF sem cadastro. Cadastre agora e o cliente já ganha pontos nesta compra.</small>
+          <small className="text-xs text-muted" role="status">CPF sem cadastro. Cadastre agora e o cliente já ganha pontos nesta compra.</small>
           <input
             className="rounded-md border border-line-2 bg-surface px-2.5 py-2"
             placeholder="Nome do cliente"
@@ -122,7 +122,7 @@ function ClientPanel({ client, onSelect, onClear, onRegistered }: ClientPanelPro
         </div>
       )}
 
-      {error && <p className={errorClass}>{error}</p>}
+      {error && <p className={errorClass} role="alert">{error}</p>}
     </Secao>
   );
 }

@@ -116,7 +116,7 @@ function Clientes() {
                       <td className={tdClass}><LevelBadge level={client.level} /></td>
                       <td className={`${tdClass} text-right`}>{formatNumber(client.points)} pts</td>
                       <td className={`${tdClass} text-right`}>{client.purchases}</td>
-                      <td className={`${tdClass} text-right`}>{client.lastPurchase ? formatDay(client.lastPurchase) : <span className="text-faint">—</span>}</td>
+                      <td className={`${tdClass} text-right`}>{client.lastPurchase ? formatDay(client.lastPurchase) : <span className="text-muted">—</span>}</td>
                     </tr>
                   ))}
                 </tbody>

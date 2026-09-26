@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { CircleHelp, House, Search } from "lucide-react";
+import { CircleHelp, House, PersonStanding, Search } from "lucide-react";
 import { REGISTER_NAME, STORE_NAME } from "../../config";
 import { useAcoes } from "../../contexts/acoes";
 import { useCaixa } from "../../contexts/caixa";
@@ -21,11 +21,12 @@ const itemInativo = "text-muted hover:bg-subtle hover:text-ink";
 // Feito com IA: layout do componente de sidebar do shadcn adaptado ao projeto (tokens bg-surface/text-ink/
 // border-line no lugar de card/foreground, sem classes dark:, e NavLink no lugar do estado interno).
 // `collapsed` é a "rail": só os ícones, com o nome em title/aria-label; a sidebar nunca sai da tela.
-export function Sidebar({ collapsed = false, onSearch, onNavigate, onTour }: {
+export function Sidebar({ collapsed = false, onSearch, onNavigate, onTour, onAcessibilidade }: {
   collapsed?: boolean;
   onSearch: () => void;
   onNavigate?: () => void;
   onTour: () => void;
+  onAcessibilidade: () => void;
 }) {
   const itemClass = collapsed ? itemRecolhido : itemExpandido;
 
@@ -60,6 +61,17 @@ export function Sidebar({ collapsed = false, onSearch, onNavigate, onTour }: {
 
       <div className="mt-auto flex flex-col gap-0.5 border-t border-line pt-4">
         <ConnectionStatus collapsed={collapsed} />
+        <button
+          type="button"
+          onClick={onAcessibilidade}
+          data-tour="acessibilidade"
+          title={collapsed ? "Acessibilidade" : undefined}
+          aria-label={collapsed ? "Acessibilidade" : undefined}
+          aria-haspopup="dialog"
+          className={`${itemClass} ${itemInativo}`}
+        >
+          <ItemBody icon={PersonStanding} title="Acessibilidade" active={false} collapsed={collapsed} />
+        </button>
         <button
           type="button"
           onClick={onTour}

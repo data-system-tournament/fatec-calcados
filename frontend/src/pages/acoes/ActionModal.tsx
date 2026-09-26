@@ -42,7 +42,7 @@ function ActionModal({ action, onDone, onClose }: ActionModalProps) {
             key={`${client.name}-${client.cpf}`}
             className="flex items-baseline justify-between gap-3 border-b border-line py-2 text-[13px] last:border-0"
           >
-            <span>{client.name}<small className="block text-[11.5px] text-faint">{client.cpf}</small></span>
+            <span>{client.name}<small className="block text-[11.5px] text-muted">{client.cpf}</small></span>
             <span className="text-muted">{client.detail}</span>
           </li>
         ))}

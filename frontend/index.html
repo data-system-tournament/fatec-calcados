@@ -8,6 +8,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script>
+      // Aplica as configurações de acessibilidade (hooks/useAcessibilidade.ts) antes da primeira pintura,
+      // para a página não abrir com a letra pequena e depois pular.
+      try {
+        var a = JSON.parse(localStorage.getItem("fatec:acessibilidade") || "{}");
+        var r = document.documentElement;
+        if (a.fonte && a.fonte !== "normal") r.setAttribute("data-fonte", a.fonte);
+        if (a.contrasteAlto) r.setAttribute("data-contraste", "alto");
+        if (a.espacamentoAmplo) r.setAttribute("data-espacamento", "amplo");
+        if (a.reduzirMovimento) r.setAttribute("data-movimento", "reduzido");
+        if (a.sublinharLinks) r.setAttribute("data-links", "sublinhados");
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

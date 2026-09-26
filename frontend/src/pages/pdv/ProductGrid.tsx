@@ -21,17 +21,17 @@ function ProductGrid({ products, quantidades, onAdd }: ProductGridProps) {
   const visiveis = filtro ? products.filter((p) => categoriaDoProduto(p.name) === filtro) : products;
 
   if (products.length === 0) {
-    return <p className="py-12 text-center text-muted">Carregando produtos...</p>;
+    return <p className="py-12 text-center text-muted" role="status">Carregando produtos...</p>;
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <button className={chipBase + (filtro === null ? chipAtivo : chipInativo)} onClick={() => setFiltro(null)}>
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filtrar por categoria">
+        <button className={chipBase + (filtro === null ? chipAtivo : chipInativo)} aria-pressed={filtro === null} onClick={() => setFiltro(null)}>
           Todos
         </button>
         {CATEGORIAS.map((c) => (
-          <button key={c} className={chipBase + (filtro === c ? chipAtivo : chipInativo)} onClick={() => setFiltro(c)}>
+          <button key={c} className={chipBase + (filtro === c ? chipAtivo : chipInativo)} aria-pressed={filtro === c} onClick={() => setFiltro(c)}>
             {c}
           </button>
         ))}
@@ -66,7 +66,7 @@ function ProductGrid({ products, quantidades, onAdd }: ProductGridProps) {
                   <span className="text-[13.5px] leading-snug font-medium">{product.name}</span>
                   <span className="mt-auto flex items-baseline justify-between pt-1.5">
                     <b className="text-[14px] font-semibold tabular-nums">{formatMoney(product.price)}</b>
-                    <small className="text-[11px] text-faint tabular-nums">{product.sku}</small>
+                    <small className="text-[11px] text-muted tabular-nums">{product.sku}</small>
                   </span>
                 </span>
               </button>

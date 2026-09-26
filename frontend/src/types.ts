@@ -1,4 +1,4 @@
-// Formatos que as telas usam depois da conversão feita em services/api.js.
+// Formatos que as telas usam depois da conversão feita em services/api/.
 
 export type Product = {
   sku: string;

@@ -1,6 +1,11 @@
+import unicodedata
 import uuid
 from decimal import Decimal
 
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
@@ -235,3 +240,90 @@ def registrar_venda(
     ])
     return compra, True
 
+
+
+# ---------- Área do cliente (loja online) ----------
+
+CODIGO_CAIXA_ONLINE = "online-01"
+PAGAMENTOS_ONLINE = (FormaPagamento.PIX, FormaPagamento.CREDITO)
+
+
+# A loja online é um caixa como os outros; é criada na primeira vez que alguém precisa dela
+# (o seed apaga e recria as lojas, então ela não pode depender de uma migração de dados).
+def caixa_online() -> Caixa:
+    caixa = Caixa.objects.select_related("loja").filter(codigo=CODIGO_CAIXA_ONLINE).first()
+    if caixa:
+        return caixa
+    loja = Loja.objects.create(nome="Loja Online", cidade="Internet")
+    return Caixa.objects.create(codigo=CODIGO_CAIXA_ONLINE, nome="Loja online", loja=loja)
+
+
+def _primeiro_nome(nome) -> str:
+    texto = unicodedata.normalize("NFD", str(nome or "").strip().lower())
+    texto = "".join(c for c in texto if not unicodedata.combining(c))
+    return texto.split()[0] if texto.split() else ""
+
+
+# Feito com IA: cria o acesso (CPF + senha) de um cliente. CPF novo vira cadastro na loja online.
+# CPF que já está no programa (cadastrado no caixa) só ganha acesso se o primeiro nome conferir,
+# para ninguém tomar a conta de outra pessoa sabendo apenas o CPF.
+@transaction.atomic
+def criar_acesso(cpf, nome, senha) -> Cliente:
+    numero = cpf_utils.limpar(cpf)
+    if not cpf_utils.validar(numero):
+        raise RegraViolada("CPF inválido. Confira os números.")
+
+    cliente = Cliente.objects.select_for_update().filter(cpf=numero).first()
+    if cliente and cliente.usuario_id:
+        raise RegraViolada("Esse CPF já tem acesso. Entre com sua senha.")
+    if cliente and _primeiro_nome(nome) != _primeiro_nome(cliente.nome):
+        raise RegraViolada("O nome não confere com o cadastro desse CPF.")
+
+    usuario = User(username=numero, first_name=(nome or "").strip()[:150])
+    try:
+        validate_password(senha or "", usuario)
+    except ValidationError as e:
+        raise RegraViolada(" ".join(e.messages))
+
+    if cliente is None:
+        cliente = cadastrar_cliente(numero, nome, caixa_online().loja)
+
+    # Usuário que sobrou de um cliente apagado (ex.: pelo seed); nunca mexe em contas da equipe.
+    User.objects.filter(username=numero, cliente__isnull=True, is_staff=False).delete()
+    usuario.set_password(senha)
+    usuario.save()
+    cliente.usuario = usuario
+    cliente.save(update_fields=["usuario"])
+    return cliente
+
+
+def autenticar_cliente(request, cpf, senha) -> Cliente:
+    usuario = authenticate(request, username=cpf_utils.limpar(cpf), password=senha or "")
+    cliente = getattr(usuario, "cliente", None) if usuario else None
+    if cliente is None:
+        raise RegraViolada("CPF ou senha incorretos.")
+    login(request, usuario)
+    return cliente
+
+
+# Feito com IA: compra feita pelo próprio cliente. O CPF vem do cliente da sessão (nunca do corpo da
+# requisição) e a venda passa pelo mesmo registrar_venda do PDV: mesmas regras de preço, pontos e resgate.
+def comprar_online(cliente: Cliente, itens, forma_pagamento: str, pontos_resgate: int = 0, id=None):
+    if forma_pagamento not in PAGAMENTOS_ONLINE:
+        raise RegraViolada("Na loja online o pagamento é por Pix ou cartão de crédito.")
+    return registrar_venda(caixa_online(), itens, forma_pagamento, cliente.cpf, pontos_resgate, id=id)
+
+
+# Feito com IA: troca de senha na "Minha conta". Pede a senha atual (quem pegou o computador logado
+# não troca a senha sozinho) e aplica os mesmos validadores do cadastro.
+def alterar_senha(cliente: Cliente, senha_atual, nova_senha):
+    usuario = cliente.usuario
+    if usuario is None or not usuario.check_password(senha_atual or ""):
+        raise RegraViolada("A senha atual não confere.")
+    try:
+        validate_password(nova_senha or "", usuario)
+    except ValidationError as e:
+        raise RegraViolada(" ".join(e.messages))
+    usuario.set_password(nova_senha)
+    usuario.save(update_fields=["password"])
+    return usuario

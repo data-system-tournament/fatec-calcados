@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -60,6 +61,10 @@ class Cliente(models.Model):
     nome = models.CharField(max_length=120)
     cadastrado_em = models.DateTimeField(default=timezone.now)
     loja_cadastro = models.ForeignKey(Loja, on_delete=models.PROTECT, null=True, blank=True)
+    # Acesso à área do cliente (CPF + senha). O User do Django só guarda a senha; o username é o CPF.
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="cliente"
+    )
 
     class Meta:
         ordering = ["nome"]

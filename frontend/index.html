@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/fatec-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FATECalçados · Programa de Fidelidade</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,6 +19,13 @@
         if (a.espacamentoAmplo) r.setAttribute("data-espacamento", "amplo");
         if (a.reduzirMovimento) r.setAttribute("data-movimento", "reduzido");
         if (a.sublinharLinks) r.setAttribute("data-links", "sublinhados");
+      } catch (e) {}
+
+      // Aplica o tema salvo (hooks/useTema.ts, fatec:tema) antes de pintar a página, para não piscar no tema errado.
+      try {
+        var tema = localStorage.getItem("fatec:tema");
+        if (tema === "claro") document.documentElement.dataset.theme = "light";
+        if (tema === "escuro") document.documentElement.dataset.theme = "dark";
       } catch (e) {}
     </script>
   </head>

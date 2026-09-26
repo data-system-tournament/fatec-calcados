@@ -102,6 +102,9 @@ function Cabecalho() {
           <span className="hidden min-[440px]:inline">FATECalçados</span>
         </Link>
         <nav className="flex items-center gap-5 text-[14px] font-medium sm:gap-6">
+          <Link to="/dashboard" className="underline-offset-4 hover:underline max-sm:hidden">
+            Área da loja
+          </Link>
           <Link to="/login" className="underline-offset-4 hover:underline">
             Entrar
           </Link>

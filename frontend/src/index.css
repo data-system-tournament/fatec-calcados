@@ -25,10 +25,17 @@
   --violeta-soft: #F1EBFE;
   --ciano: #0E7490;
   --ciano-soft: #E4F5F9;
+  --rosa: #DB2777;
+  --rosa-soft: #FDEBF3;
+  --laranja: #EA580C;
+  --laranja-soft: #FEF0E6;
+  --esmeralda: #047857;
+  --esmeralda-soft: #E3F6EF;
   --bronze: #B87333;
   --prata: #A1A1AA;
   --shadow: 0 1px 2px rgba(24, 24, 27, .04);
   --pop: 0 12px 32px rgba(24, 24, 27, .12), 0 2px 6px rgba(24, 24, 27, .06);
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -54,8 +61,15 @@
     --violeta-soft: #221B3D;
     --ciano: #38C4E0;
     --ciano-soft: #10262D;
+    --rosa: #F472B6;
+    --rosa-soft: #2E1424;
+    --laranja: #FB923C;
+    --laranja-soft: #2E1C10;
+    --esmeralda: #34D399;
+    --esmeralda-soft: #0F2620;
     --shadow: none;
     --pop: 0 12px 32px rgba(0, 0, 0, .5);
+    color-scheme: dark;
   }
 }
 
@@ -81,8 +95,15 @@
   --violeta-soft: #221B3D;
   --ciano: #38C4E0;
   --ciano-soft: #10262D;
+  --rosa: #F472B6;
+  --rosa-soft: #2E1424;
+  --laranja: #FB923C;
+  --laranja-soft: #2E1C10;
+  --esmeralda: #34D399;
+  --esmeralda-soft: #0F2620;
   --shadow: none;
   --pop: 0 12px 32px rgba(0, 0, 0, .5);
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -104,6 +125,12 @@
   --color-violeta-soft: var(--violeta-soft);
   --color-ciano: var(--ciano);
   --color-ciano-soft: var(--ciano-soft);
+  --color-rosa: var(--rosa);
+  --color-rosa-soft: var(--rosa-soft);
+  --color-laranja: var(--laranja);
+  --color-laranja-soft: var(--laranja-soft);
+  --color-esmeralda: var(--esmeralda);
+  --color-esmeralda-soft: var(--esmeralda-soft);
   --color-ok: var(--ok);
   --color-ok-soft: var(--ok-soft);
   --color-danger: var(--danger);
@@ -244,6 +271,9 @@
   --app: #1D4ED8;
   --ok: #0F5F2C;
   --danger: #A31F1F;
+  --rosa: #9D174D;
+  --laranja: #9A3412;
+  --esmeralda: #065F46;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -258,6 +288,9 @@
     --app: #A5BBFF;
     --ok: #86EFAC;
     --danger: #FCA5A5;
+    --rosa: #F9A8D4;
+    --laranja: #FDBA74;
+    --esmeralda: #6EE7B7;
   }
 }
 
@@ -272,6 +305,9 @@
   --app: #A5BBFF;
   --ok: #86EFAC;
   --danger: #FCA5A5;
+  --rosa: #F9A8D4;
+  --laranja: #FDBA74;
+  --esmeralda: #6EE7B7;
 }
 
 :root[data-contraste="alto"] :focus-visible {
@@ -309,7 +345,9 @@
 
 /* Landing page (rota "/"). Paleta própria, fixa: não segue o tema claro/escuro do app, porque a página
    é a vitrine do programa e não uma tela de trabalho. As cores de marca vêm da logo (public/fatec-icon.svg):
-   o vinho #8F0D0D e o cinza #B7B7B7. As seções alternam fundos (preto, osso, vinho, cinza) para dar ritmo. */
+   o vinho #8F0D0D e o cinza #B7B7B7. As seções alternam fundos (preto, osso, vinho, cinza) para dar ritmo.
+   As telas de acesso (/login, /cadastro, classe .landing-acesso) usam os tokens por função (--l-fundo,
+   --l-texto, --l-linha...), que trocam de valor no tema claro (ver abaixo). */
 .landing {
   --l-black: #0b0b0c;
   --l-black-2: #151517;
@@ -329,16 +367,113 @@
   --l-cinza: #b7b7b7;
   --l-cinza-texto: #3a3a3d;
   --l-osso: #efede9;
-  background: var(--l-black);
-  color: var(--l-white);
+  /* Tokens por função das telas de acesso: escuros por padrão (os mesmos tons da landing). */
+  --l-fundo: #0b0b0c;
+  --l-fundo-2: #151517;
+  --l-linha: #2a2a2e;
+  --l-texto: #fafafa;
+  --l-texto-2: #a1a1a8;
+  --l-carta-de: #232326;
+  --l-carta-ate: #141416;
+  --l-borda-carta: rgba(255, 255, 255, .08);
+  --l-sombra: 0 24px 48px rgba(0, 0, 0, .45);
+  --l-painel-de: #2a2a2e;
+  --l-painel-meio: #151517;
+  /* Cores de apoio: cada nível e brilho tem a sua. "-fundo" é o quadradinho atrás do ícone. */
+  --l-ambar: #f5b82e;
+  --l-ambar-fundo: #33260a;
+  --l-laranja: #fb8a3c;
+  --l-laranja-fundo: #33190a;
+  --l-esmeralda: #34d399;
+  --l-esmeralda-fundo: #0c2a20;
+  --l-violeta: #a78bfa;
+  --l-violeta-fundo: #221a3d;
+  --l-azul: #7c9cff;
+  --l-azul-fundo: #16203d;
+  --l-bronze: #d08a4f;
+  --l-prata: #c4c4cc;
+  --l-ouro: #f5c542;
+  background: var(--l-fundo);
+  color: var(--l-texto);
+  color-scheme: dark;
   font-size: 16px;
   line-height: 1.6;
   font-feature-settings: "cv11" 1, "ss01" 1;
 }
 
+/* Tema claro das telas de acesso: escolhido no site (data-theme="light") ou vindo do sistema quando não há
+   escolha. Só nelas: a landing fica sempre com a paleta fixa. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .landing-acesso {
+    --l-fundo: #fafafa;
+    --l-fundo-2: #ffffff;
+    --l-linha: #e2e2e5;
+    --l-texto: #0b0b0c;
+    --l-texto-2: #5b5b63;
+    --l-carta-de: #ffffff;
+    --l-carta-ate: #f4f4f5;
+    --l-borda-carta: rgba(11, 11, 12, .08);
+    --l-sombra: 0 24px 48px rgba(24, 24, 27, .12);
+    --l-painel-de: #fdf2f4;
+    --l-painel-meio: #ffffff;
+    --l-vinho-claro: #b3203a;
+    --l-ambar: #a16207;
+    --l-ambar-fundo: #fdf3d8;
+    --l-laranja: #c2410c;
+    --l-laranja-fundo: #feeadb;
+    --l-esmeralda: #047857;
+    --l-esmeralda-fundo: #dcf5ea;
+    --l-violeta: #6d3fd9;
+    --l-violeta-fundo: #efe8fe;
+    --l-azul: #3563e9;
+    --l-azul-fundo: #e6edfe;
+    --l-bronze: #9a5a24;
+    --l-prata: #71717a;
+    --l-ouro: #b7860b;
+    color-scheme: light;
+  }
+}
+
+:root[data-theme="light"] .landing-acesso {
+  --l-fundo: #fafafa;
+  --l-fundo-2: #ffffff;
+  --l-linha: #e2e2e5;
+  --l-texto: #0b0b0c;
+  --l-texto-2: #5b5b63;
+  --l-carta-de: #ffffff;
+  --l-carta-ate: #f4f4f5;
+  --l-borda-carta: rgba(11, 11, 12, .08);
+  --l-sombra: 0 24px 48px rgba(24, 24, 27, .12);
+  --l-painel-de: #fdf2f4;
+  --l-painel-meio: #ffffff;
+  --l-vinho-claro: #b3203a;
+  --l-ambar: #a16207;
+  --l-ambar-fundo: #fdf3d8;
+  --l-laranja: #c2410c;
+  --l-laranja-fundo: #feeadb;
+  --l-esmeralda: #047857;
+  --l-esmeralda-fundo: #dcf5ea;
+  --l-violeta: #6d3fd9;
+  --l-violeta-fundo: #efe8fe;
+  --l-azul: #3563e9;
+  --l-azul-fundo: #e6edfe;
+  --l-bronze: #9a5a24;
+  --l-prata: #71717a;
+  --l-ouro: #b7860b;
+  color-scheme: light;
+}
+
 .landing ::selection {
-  background: var(--l-white);
-  color: var(--l-black);
+  background: var(--l-vinho-claro);
+  color: #fff;
+}
+
+/* Texto com degradê vinho → laranja → âmbar (a palavra "ponto." do hero e os destaques do manifesto). */
+.landing-degrade {
+  background: linear-gradient(100deg, var(--l-vinho-claro), var(--l-laranja) 55%, var(--l-ambar));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .landing a:focus-visible {
@@ -496,10 +631,13 @@
 
   /* Feito com IA: o ResponsiveContainer do Recharts mede a largura da tela e não a da folha, e a
      janela de impressão abre antes de ele medir de novo. Como o SVG tem viewBox, basta deixá-lo
-     ocupar a largura do card que ele se ajusta à escala. */
+     ocupar a largura do card que ele se ajusta à escala. Com width="100%" o Recharts põe o gráfico numa
+     div interna de largura 0 (overflow visível), que também precisa ganhar a largura, senão 100% vira 0.
+     Só o SVG principal (filho direto do wrapper): outros SVGs com a mesma classe não podem esticar. */
   .recharts-responsive-container,
+  .recharts-responsive-container > div,
   .recharts-wrapper,
-  .recharts-surface {
+  .recharts-wrapper > svg.recharts-surface {
     width: 100% !important;
     height: auto !important;
   }

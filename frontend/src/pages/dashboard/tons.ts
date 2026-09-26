@@ -2,7 +2,8 @@
 // azul = pontos acumulados, verde = resgatados, âmbar = custo e vencimento, vermelho = expirados,
 // violeta = base de clientes, ciano = vendas. Os níveis usam bronze/prata/ouro (LevelBadge).
 // As classes ficam escritas por inteiro (e não montadas com `bg-${cor}`) para o Tailwind achá-las.
-export type Tom = "azul" | "verde" | "ambar" | "vermelho" | "violeta" | "ciano";
+// Rosa, laranja e esmeralda ainda não têm significado no dashboard: ficam para indicadores novos.
+export type Tom = "azul" | "verde" | "ambar" | "vermelho" | "violeta" | "ciano" | "rosa" | "laranja" | "esmeralda";
 
 type Classes = {
   painel: string; // fundo e borda de um bloco tingido
@@ -33,4 +34,17 @@ export const TONS: Record<Tom, Classes> = {
     barra: "bg-violeta",
   },
   ciano: { painel: "border-ciano/20 bg-ciano-soft", chip: "bg-ciano-soft text-ciano", icone: "text-ciano", barra: "bg-ciano" },
+  rosa: { painel: "border-rosa/20 bg-rosa-soft", chip: "bg-rosa-soft text-rosa", icone: "text-rosa", barra: "bg-rosa" },
+  laranja: {
+    painel: "border-laranja/20 bg-laranja-soft",
+    chip: "bg-laranja-soft text-laranja",
+    icone: "text-laranja",
+    barra: "bg-laranja",
+  },
+  esmeralda: {
+    painel: "border-esmeralda/20 bg-esmeralda-soft",
+    chip: "bg-esmeralda-soft text-esmeralda",
+    icone: "text-esmeralda",
+    barra: "bg-esmeralda",
+  },
 };

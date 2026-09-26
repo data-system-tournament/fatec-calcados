@@ -1,9 +1,16 @@
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { DashboardData } from "../../types";
 import { formatNumber } from "../../utils/format";
 
 const axisText = { fill: "var(--muted)", fontSize: 11 };
 const tooltipBox = { background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8 };
+
+// As mesmas cores dos KPIs e do passivo de pontos: azul acumulado, verde resgatado, vermelho expirado.
+const SERIES = [
+  { chave: "earned", nome: "Acumulados", cor: "var(--app)" },
+  { chave: "redeemed", nome: "Resgatados", cor: "var(--ok)" },
+  { chave: "expired", nome: "Expirados", cor: "var(--danger)" },
+] as const;
 
 function PointsChart({ data }: { data: DashboardData["monthly"] }) {
   return (
@@ -22,13 +29,23 @@ function PointsChart({ data }: { data: DashboardData["monthly"] }) {
               labelStyle={{ color: "var(--ink)" }}
               cursor={{ fill: "var(--subtle)" }}
             />
-            <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 12.5 }} />
-            {/* As mesmas cores dos KPIs e do passivo de pontos: azul acumulado, verde resgatado, vermelho expirado. */}
-            <Bar dataKey="earned" name="Acumulados" fill="var(--app)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="redeemed" name="Resgatados" fill="var(--ok)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="expired" name="Expirados" fill="var(--danger)" radius={[4, 4, 0, 0]} />
+            {SERIES.map((s) => (
+              <Bar key={s.chave} dataKey={s.chave} name={s.nome} fill={s.cor} radius={[4, 4, 0, 0]} />
+            ))}
           </BarChart>
         </ResponsiveContainer>
+
+        {/* Feito com IA: legenda em HTML em vez da <Legend> do Recharts. A dele fica em posição absoluta
+            sobre o gráfico e usa o mesmo <svg class="recharts-surface"> do gráfico, então quebrava no PDF
+            quando o gráfico é redimensionado para a folha. Assim ela só segue o fluxo, na tela e no papel. */}
+        <ul className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[12.5px] text-ink-2">
+          {SERIES.map((s) => (
+            <li key={s.chave} className="flex items-center gap-1.5">
+              <span className="size-2.5 rounded-[2px]" style={{ background: s.cor }} />
+              {s.nome}
+            </li>
+          ))}
+        </ul>
       </div>
 
       <table className="sr-only">

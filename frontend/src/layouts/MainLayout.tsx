@@ -3,12 +3,14 @@ import { Outlet, useLocation, useMatch } from "react-router-dom";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { PainelAcessibilidade } from "../components/layout/PainelAcessibilidade";
 import { SearchPalette } from "../components/layout/SearchPalette";
-import { Sidebar } from "../components/layout/Sidebar";
-import { tituloDaRota } from "../components/layout/navegacao";
+import { Sidebar, StatusDoCaixa, type AvisoDaRota } from "../components/layout/Sidebar";
+import { tituloDaRota, type Rota } from "../components/layout/navegacao";
 import { passosDoTour } from "../components/layout/passosTour";
 import { TourGuiado } from "../components/layout/TourGuiado";
 import { STORE_NAME } from "../config";
+import { useAcoes } from "../contexts/acoes";
 import { AcoesProvider } from "../contexts/AcoesProvider";
+import { useCaixa } from "../contexts/caixa";
 import { CaixaProvider } from "../contexts/CaixaProvider";
 import { ToastProvider } from "../contexts/ToastProvider";
 import { useAtalhoBusca } from "../hooks/useAtalhoBusca";
@@ -61,6 +63,14 @@ function Shell() {
     ? `${asideMobile} ${sidebar.open ? "translate-x-0" : "-translate-x-full"}`
     : `${asideDesktop} ${sidebar.open ? "w-[260px]" : "w-16"}`;
 
+  // PDV offline e ações pendentes aparecem ao lado do nome na sidebar.
+  const { online } = useCaixa();
+  const { openCount } = useAcoes();
+  function avisoDaRota(rota: Rota): AvisoDaRota | undefined {
+    if (rota.to === "/pdv" && !online) return { etiqueta: "offline", descricao: "offline" };
+    if (rota.to === "/acoes" && openCount > 0) return { contador: openCount, descricao: `${openCount} pendentes` };
+  }
+
   function handleSearch() {
     setSearching(true);
     sidebar.close();
@@ -85,6 +95,8 @@ function Shell() {
       <aside id="menu-lateral" className={`${asideClass} print:hidden`} inert={sidebar.mobile && !sidebar.open}>
         <Sidebar
           collapsed={!sidebar.mobile && !sidebar.open}
+          avisoDaRota={avisoDaRota}
+          status={(collapsed) => <StatusDoCaixa collapsed={collapsed} />}
           onSearch={handleSearch}
           onNavigate={sidebar.mobile ? sidebar.close : undefined}
           onTour={tour.iniciar}

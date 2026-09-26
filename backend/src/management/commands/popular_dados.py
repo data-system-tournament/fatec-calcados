@@ -2,6 +2,7 @@ import random
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
@@ -75,6 +76,7 @@ class Command(BaseCommand):
         MovimentoPontos.objects.all().delete()
         Compra.objects.all().delete()
         Caixa.objects.all().delete()
+        User.objects.filter(cliente__isnull=False, is_staff=False).delete()
         Cliente.objects.all().delete()
         Produto.objects.all().delete()
         Loja.objects.all().delete()

@@ -12,6 +12,16 @@ const ACTION_ICONS: Record<string, LucideIcon> = {
   segunda_compra: UserPlus,
 };
 
+// Cor de cada lista (fundo do ícone e faixa lateral): sumindo = rosa, vencendo = âmbar (como os pontos
+// a vencer no dashboard), subir de nível = esmeralda, segunda compra = violeta (base de clientes).
+const ACTION_TONES: Record<string, { chip: string; faixa: string }> = {
+  sumindo: { chip: "bg-rosa-soft text-rosa", faixa: "border-l-rosa" },
+  vencendo: { chip: "bg-accent-soft text-accent-ink", faixa: "border-l-accent" },
+  subir: { chip: "bg-esmeralda-soft text-esmeralda", faixa: "border-l-esmeralda" },
+  segunda_compra: { chip: "bg-violeta-soft text-violeta", faixa: "border-l-violeta" },
+};
+const TOM_PADRAO = { chip: "bg-app-soft text-app", faixa: "border-l-app" };
+
 type ActionCardProps = {
   action: Action;
   done: boolean;
@@ -23,13 +33,16 @@ function ActionCard({ action, done, onOpen }: ActionCardProps) {
   const preview = action.clients.slice(0, 3).map((c) => c.name).join(", ");
   const ActionIcon = ACTION_ICONS[action.type] ?? ListChecks;
   const highlight = !done && count > 0;
+  const tom = ACTION_TONES[action.type] ?? TOM_PADRAO;
 
   return (
     <Card
-      className={`flex items-center justify-between gap-4 px-[18px] py-4 max-[860px]:flex-col max-[860px]:items-stretch ${highlight ? "border-l-[3px] border-l-accent" : ""}`}
+      className={`flex items-center justify-between gap-4 px-[18px] py-4 max-[860px]:flex-col max-[860px]:items-stretch ${highlight ? `border-l-[3px] ${tom.faixa}` : ""}`}
     >
       <div className="flex min-w-0 items-center gap-3.5">
-        <span className={`flex flex-none ${done ? "text-faint" : "text-ink"}`}><ActionIcon size={28} /></span>
+        <span className={`grid size-11 flex-none place-items-center rounded-[10px] ${done ? "bg-subtle text-faint" : tom.chip}`}>
+          <ActionIcon size={22} />
+        </span>
         <div>
           <h3 className={`text-sm font-medium ${done ? "text-muted" : ""}`}>
             {action.title} <Pill className="ml-1 align-[1px]">{count}</Pill>

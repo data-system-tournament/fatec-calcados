@@ -205,3 +205,28 @@ export type SaleDetail = Omit<SaleListItem, "itemCount"> & {
   levelAtPurchase: string;
   items: { sku: string; name: string; quantity: number; unitPrice: number; subtotal: number }[];
 };
+
+// Área do cliente: o perfil + o que o próprio cliente quer ver no painel dele.
+export type ClientDashboard = ClientProfile & {
+  levelProgress: number;
+  expiring: { days: number; points: number; nextDate: string | null };
+  savings: number;
+  topProducts: (Product & { units: number })[];
+};
+
+export type OnlinePayment = "PIX" | "CREDITO";
+
+export type OnlinePurchase = {
+  id: string;
+  items: CartItem[];
+  payment: OnlinePayment;
+  pointsToRedeem: number;
+};
+
+export type OnlinePurchaseResult = {
+  id: string;
+  total: number;
+  discount: number;
+  pointsEarned: number;
+  balance: number | null;
+};

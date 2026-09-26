@@ -1,8 +1,15 @@
 import { createBrowserRouter } from "react-router-dom";
+import ClienteLayout from "../layouts/ClienteLayout";
 import MainLayout from "../layouts/MainLayout";
 import Actions from "../pages/acoes/Actions";
 import ClientePerfil from "../pages/clientes/ClientePerfil";
 import Clientes from "../pages/clientes/Clientes";
+import Checkout from "../pages/conta/Checkout";
+import Loja from "../pages/conta/Loja";
+import MeusDados from "../pages/conta/MeusDados";
+import MeusPontos from "../pages/conta/MeusPontos";
+import MinhaConta from "../pages/conta/MinhaConta";
+import MinhasCompras from "../pages/conta/MinhasCompras";
 import Dashboard from "../pages/dashboard/Dashboard";
 import Cadastro from "../pages/inicio/Cadastro";
 import Landing from "../pages/inicio/Landing";
@@ -20,6 +27,20 @@ export const router = createBrowserRouter([
   { path: "/", element: <Landing /> },
   { path: "/login", element: <Login /> },
   { path: "/cadastro", element: <Cadastro /> },
+  // Área do cliente (login por CPF + senha em /login e /cadastro): a loja (/loja, tela inicial depois do
+  // login) e a "Minha conta". Mesmo visual do MainLayout, com as rotas do cliente na sidebar.
+  {
+    element: <ClienteLayout />,
+    errorElement: <RouteError />,
+    children: [
+      { path: "loja", element: <Loja /> },
+      { path: "loja/carrinho", element: <Checkout /> },
+      { path: "minha-conta", element: <MinhaConta /> },
+      { path: "minha-conta/compras", element: <MinhasCompras /> },
+      { path: "minha-conta/pontos", element: <MeusPontos /> },
+      { path: "minha-conta/dados", element: <MeusDados /> },
+    ],
+  },
   {
     element: <MainLayout />,
     children: [

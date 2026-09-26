@@ -6,6 +6,8 @@
   --bg: #F7F7F8;
   --surface: #fff;
   --subtle: #F4F4F5;
+  /* Fundo da "foto" dos produtos na loja online (enquanto não há imagens): branco no claro. */
+  --foto: #fff;
   --ink: #18181B;
   --ink-2: #3F3F46;
   --muted: #71717A;
@@ -43,6 +45,7 @@
     --bg: #0F1012;
     --surface: #17181B;
     --subtle: #1F2024;
+    --foto: #222328;
     --ink: #F4F4F5;
     --ink-2: #D4D4D8;
     --muted: #A1A1AA;
@@ -77,6 +80,7 @@
   --bg: #0F1012;
   --surface: #17181B;
   --subtle: #1F2024;
+  --foto: #222328;
   --ink: #F4F4F5;
   --ink-2: #D4D4D8;
   --muted: #A1A1AA;
@@ -110,6 +114,7 @@
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-subtle: var(--subtle);
+  --color-foto: var(--foto);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-muted: var(--muted);

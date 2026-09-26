@@ -11,7 +11,7 @@ import ProductGrid from "../pdv/ProductGrid";
 import { CompreDeNovo } from "./pecas";
 
 // Tela inicial do cliente (como a home das lojas online): faixa com os pontos, "compre de novo" e a vitrine,
-// com o mesmo catálogo (e a mesma grade) do PDV. Cada clique soma uma unidade ao carrinho.
+// com o mesmo catálogo do PDV em cards de vitrine (CardProduto). O botão do card soma uma unidade ao carrinho.
 function Loja() {
   const { account, products, cart, addToCart } = useConta();
   const { itemCount, subtotal } = useCarrinhoOnline(0);
@@ -73,7 +73,7 @@ function Loja() {
       {termo && visiveis.length === 0 ? (
         <p className="py-12 text-center text-muted">Nenhum produto encontrado para “{busca}”.</p>
       ) : (
-        <ProductGrid products={visiveis} quantidades={quantidades} onAdd={adicionar} />
+        <ProductGrid products={visiveis} quantidades={quantidades} onAdd={adicionar} variante="loja" bonus={account?.bonusPercent ?? 0} />
       )}
 
       {itemCount > 0 && (

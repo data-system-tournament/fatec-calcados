@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import type { Product } from "../../types";
+import CardProduto from "../conta/CardProduto";
 import { formatMoney } from "../../utils/format";
 import { CATEGORIAS, categoriaDoProduto, iconeDoProduto, type Categoria } from "./categorias";
 
@@ -8,15 +9,25 @@ const chipBase = "rounded-full border px-3 py-1 text-[12.5px] font-medium transi
 const chipAtivo = "border-ink bg-ink text-surface";
 const chipInativo = "border-line-2 bg-surface text-ink-2 hover:border-faint";
 
+// O PDV usa uma grade compacta (o caixa clica rápido); a loja online, cards maiores de vitrine.
+const grades = {
+  pdv: "grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-2",
+  loja: "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4",
+};
+
 type ProductGridProps = {
   products: Product[];
   // Quantidade de cada produto já no carrinho (por sku), para marcar o card.
   quantidades: Record<string, number>;
   onAdd: (product: Product) => void;
+  // "loja": cards de vitrine (CardProduto) para a loja online; "pdv" (padrão): o card compacto do caixa.
+  variante?: keyof typeof grades;
+  // Bônus do nível do cliente, para o "+N pts" dos cards da loja.
+  bonus?: number;
 };
 
 // Catálogo em grade: cada clique soma uma unidade do produto ao carrinho.
-function ProductGrid({ products, quantidades, onAdd }: ProductGridProps) {
+function ProductGrid({ products, quantidades, onAdd, variante = "pdv", bonus = 0 }: ProductGridProps) {
   const [filtro, setFiltro] = useState<Categoria | null>(null);
   const visiveis = filtro ? products.filter((p) => categoriaDoProduto(p.name) === filtro) : products;
 
@@ -37,10 +48,17 @@ function ProductGrid({ products, quantidades, onAdd }: ProductGridProps) {
         ))}
       </div>
 
-      <ul className="grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-2">
+      <ul className={grades[variante]}>
         {visiveis.map((product) => {
           const Icone = iconeDoProduto(product.name);
           const qtd = quantidades[product.sku] ?? 0;
+          if (variante === "loja") {
+            return (
+              <li key={product.sku}>
+                <CardProduto product={product} quantidade={qtd} bonus={bonus} onAdd={onAdd} />
+              </li>
+            );
+          }
           return (
             <li key={product.sku}>
               <button

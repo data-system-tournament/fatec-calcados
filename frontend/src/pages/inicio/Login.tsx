@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { errorMessage, signIn } from "../../services/api";
-import { formatCpf } from "../../utils/format";
+import { formatCpf } from "../../utils/cpf";
 import { Campo, linkRodape, TelaAcesso } from "./TelaAcesso";
 
 // Entrada do cliente na área dele: CPF + senha (sessão do Django). Sem e-mail.

@@ -4,7 +4,7 @@ import { LevelBadge } from "../../components/ui/LevelBadge";
 import { errorClass, fieldLabelClass, inputClass } from "../../components/ui/styles";
 import { errorMessage, fetchClient, registerClient } from "../../services/api";
 import type { Client } from "../../types";
-import { formatCpf, onlyDigits } from "../../utils/format";
+import { formatCpf, onlyDigits } from "../../utils/cpf";
 import Secao from "./Secao";
 
 type Status = "typing" | "searching" | "found" | "notFound";

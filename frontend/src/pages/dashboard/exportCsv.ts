@@ -1,5 +1,5 @@
 import type { DashboardData } from "../../types";
-import { downloadCsv, type CsvCell } from "../../utils/csv";
+import { downloadCsv, type CsvCell } from "./csv";
 import { formatDate } from "../../utils/format";
 
 // Linhas do CSV do dashboard: uma seção por bloco da tela, separadas por uma linha em branco.

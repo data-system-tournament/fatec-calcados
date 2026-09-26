@@ -17,7 +17,12 @@ import { useAtalhoBusca } from "../hooks/useAtalhoBusca";
 import { useSidebar } from "../hooks/useSidebar";
 import { useTituloDaRota } from "../hooks/useTituloDaRota";
 import { useTour } from "../hooks/useTour";
-import { todayLabel } from "../utils/format";
+
+// Data do cabeçalho: "Sexta-feira, 26 de setembro".
+function todayLabel(): string {
+  const text = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  return text[0].toUpperCase() + text.slice(1);
+}
 
 function MainLayout() {
   return (

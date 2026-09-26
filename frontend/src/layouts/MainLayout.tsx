@@ -71,7 +71,7 @@ function Shell() {
       {/* Primeira parada do Tab: pula a sidebar e vai direto para a tela. Só aparece ao receber foco. */}
       <a
         href="#conteudo"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:rounded-md focus:bg-ink focus:px-3 focus:py-2 focus:text-[13px] focus:font-medium focus:text-surface focus:shadow-pop"
+        className="sr-only print:hidden focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:rounded-md focus:bg-ink focus:px-3 focus:py-2 focus:text-[13px] focus:font-medium focus:text-surface focus:shadow-pop"
       >
         Pular para o conteúdo
       </a>
@@ -82,7 +82,7 @@ function Shell() {
 
       {/* No desktop, "fechada" é a rail de ícones (nunca some). No celular é uma gaveta: fechada, fica
           inert, sem foco pelo teclado nem leitura por leitores de tela. */}
-      <aside id="menu-lateral" className={asideClass} inert={sidebar.mobile && !sidebar.open}>
+      <aside id="menu-lateral" className={`${asideClass} print:hidden`} inert={sidebar.mobile && !sidebar.open}>
         <Sidebar
           collapsed={!sidebar.mobile && !sidebar.open}
           onSearch={handleSearch}
@@ -93,7 +93,7 @@ function Shell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex min-h-14 flex-wrap items-center gap-3 border-b border-line bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] px-6 py-2 backdrop-blur-[10px] backdrop-saturate-[1.4] max-[860px]:px-4">
+        <header className="sticky top-0 z-20 flex min-h-14 flex-wrap items-center gap-3 border-b border-line bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] px-6 py-2 backdrop-blur-[10px] backdrop-saturate-[1.4] max-[860px]:px-4 print:hidden">
           <button
             type="button"
             onClick={sidebar.toggle}

@@ -1,13 +1,17 @@
-import { Download, TrendingUp } from "lucide-react";
+import { Download, Printer, TrendingUp } from "lucide-react";
 import PointsChart from "../../components/charts/PointsChart";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { hintClass } from "../../components/ui/styles";
+import { STORE_NAME } from "../../config";
 import { useDashboard } from "../../hooks/useDashboard";
 import { usePeriodoNaUrl } from "../../hooks/usePeriodoNaUrl";
+import { useTemaClaroAoImprimir } from "../../hooks/useTemaClaroAoImprimir";
+import { formatDate } from "../../utils/format";
 import CardHeading from "./CardHeading";
 import { exportDashboardCsv } from "./exportCsv";
+import { exportDashboardPdf } from "./exportPdf";
 import KpiCards from "./KpiCards";
 import LevelsCard from "./LevelsCard";
 import PeriodFilter from "./PeriodFilter";
@@ -28,6 +32,7 @@ const halvesClass = "grid grid-cols-2 gap-4 *:min-w-0 max-[1100px]:grid-cols-[mi
 function Dashboard() {
   const [period, setPeriod] = usePeriodoNaUrl();
   const { data, error, loading, retry } = useDashboard(period);
+  useTemaClaroAoImprimir();
 
   if (!data) {
     if (error) {
@@ -42,12 +47,25 @@ function Dashboard() {
       aria-busy={loading}
     >
       <div className="flex flex-col gap-4">
-        <Card className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3">
+        <Card className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3 print:hidden">
           <PeriodFilter key={data.start + data.end} data={data} onChange={setPeriod} />
-          <Button size="sm" onClick={() => exportDashboardCsv(data)}>
-            <Download size={14} className="flex-none" /> Exportar CSV
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => exportDashboardCsv(data)}>
+              <Download size={14} className="flex-none" /> Exportar CSV
+            </Button>
+            <Button size="sm" onClick={() => exportDashboardPdf(data)}>
+              <Printer size={14} className="flex-none" /> Exportar PDF
+            </Button>
+          </div>
         </Card>
+
+        {/* Só no papel: o filtro some na impressão, então o período vai escrito no topo do PDF. */}
+        <div className="hidden border-b border-line pb-3 print:block">
+          <p className="text-[13px] text-muted">{STORE_NAME} · Programa de fidelidade</p>
+          <p className="text-lg font-semibold">
+            Dashboard de {formatDate(data.start)} a {formatDate(data.end)}
+          </p>
+        </div>
 
         {loading && <p className="sr-only" role="status">Atualizando o dashboard...</p>}
         {error && (

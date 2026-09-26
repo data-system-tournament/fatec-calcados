@@ -380,3 +380,41 @@
 .landing-brilho {
   animation: landing-flutua 14s ease-in-out infinite;
 }
+
+/* Impressão / "Exportar PDF" do dashboard (pages/dashboard/exportPdf.ts). Feito com IA: a sidebar, o
+   cabeçalho e o filtro somem por classes print:hidden; aqui fica o que é do papel. O tema claro é
+   forçado por hooks/useTemaClaroAoImprimir.ts. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  /* Sem isso o navegador corta as cores de fundo (barras, selos de nível, pílulas). */
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  html,
+  body {
+    height: auto;
+    background: #fff;
+  }
+
+  #conteudo {
+    padding: 0;
+  }
+
+  /* Feito com IA: o ResponsiveContainer do Recharts mede a largura da tela e não a da folha, e a
+     janela de impressão abre antes de ele medir de novo. Como o SVG tem viewBox, basta deixá-lo
+     ocupar a largura do card que ele se ajusta à escala. */
+  .recharts-responsive-container,
+  .recharts-wrapper,
+  .recharts-surface {
+    width: 100% !important;
+    height: auto !important;
+  }
+}

@@ -26,7 +26,7 @@ function Ranking({ ranking, end }: RankingProps) {
       {ranking.length === 0 ? (
         <p className={hintClass}>Nenhuma compra com CPF nesse período.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto print:overflow-visible">
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr>

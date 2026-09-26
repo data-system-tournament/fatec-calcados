@@ -49,8 +49,8 @@ export function passosDoTour(): PassoTour[] {
     },
     {
       alvo: "acessibilidade",
-      titulo: "Acessibilidade",
-      texto: "Aumente a letra, ligue o alto contraste, reduza as animações e mais. As escolhas ficam salvas neste navegador.",
+      titulo: "Aparência e acessibilidade",
+      texto: "Escolha o tema claro, escuro ou do sistema, aumente a letra, ligue o alto contraste e mais. As escolhas ficam salvas neste navegador.",
     },
   ];
 }

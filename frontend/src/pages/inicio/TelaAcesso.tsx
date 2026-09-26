@@ -1,59 +1,70 @@
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { BotaoTema } from "./BotaoTema";
 
 // Moldura comum de /login e /cadastro: cartão dividido, painel da marca à esquerda e formulário
-// à direita. Mesma paleta preta e cinza da landing (classe .landing).
+// à direita. Mesma paleta da landing (classe .landing), clara ou escura conforme o tema.
 
 type TelaAcessoProps = {
   titulo: string;
   subtitulo: string;
   botao: string;
-  onSubmit: () => void;
+  onSubmit: (dados: FormData) => void;
+  // Mensagem de erro da API (CPF inválido, senha errada...), mostrada acima do botão.
+  erro?: string;
+  enviando?: boolean;
   rodape: ReactNode;
   children: ReactNode;
 };
 
-export function TelaAcesso({ titulo, subtitulo, botao, onSubmit, rodape, children }: TelaAcessoProps) {
-  function enviar(e: FormEvent) {
+export function TelaAcesso({ titulo, subtitulo, botao, onSubmit, erro, enviando = false, rodape, children }: TelaAcessoProps) {
+  function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    onSubmit();
+    if (!enviando) onSubmit(new FormData(e.currentTarget));
   }
 
   return (
     <div className="landing flex min-h-svh flex-col px-4 sm:px-8">
-      <header className="flex h-20 items-center">
-        <Link to="/" className="inline-flex items-center gap-2 text-[14px] text-(--l-text-dark) transition-colors hover:text-(--l-white)">
+      <header className="flex h-20 items-center justify-between">
+        <Link to="/" className="inline-flex items-center gap-2 text-[14px] text-(--l-texto-2) transition-colors hover:text-(--l-texto)">
           <ArrowLeft size={16} aria-hidden /> Voltar
         </Link>
+        <BotaoTema />
       </header>
 
       <main className="flex flex-1 items-center justify-center py-6">
-        <div className="grid w-full max-w-[1020px] overflow-hidden rounded-3xl border border-(--l-line-dark) bg-(--l-black-2) md:min-h-[600px] md:grid-cols-[1fr_1.1fr]">
+        <div className="grid w-full max-w-[1020px] overflow-hidden rounded-3xl border border-(--l-linha) bg-(--l-fundo-2) md:min-h-[600px] md:grid-cols-[1fr_1.1fr]">
           <PainelMarca />
 
           <div className="flex items-center px-6 py-12 sm:px-14">
             <div className="w-full">
               <h1 className="text-[2rem] leading-[1.1] font-semibold tracking-[-.03em]">{titulo}</h1>
-              <p className="mt-2 text-[15px] text-(--l-text-dark)">{subtitulo}</p>
+              <p className="mt-2 text-[15px] text-(--l-texto-2)">{subtitulo}</p>
 
               <form noValidate onSubmit={enviar} className="mt-9 flex flex-col gap-5">
                 {children}
+                {erro && (
+                  <p role="alert" className="rounded-xl border border-(--l-linha) bg-(--l-fundo) px-4 py-3 text-[14px]">
+                    {erro}
+                  </p>
+                )}
                 <button
                   type="submit"
-                  className="mt-2 rounded-xl bg-(--l-white) py-3.5 text-[15px] font-medium text-(--l-black) transition-colors hover:bg-white"
+                  disabled={enviando}
+                  className="mt-2 rounded-xl bg-(--l-texto) py-3.5 text-[15px] font-medium text-(--l-fundo) transition-opacity hover:opacity-90 disabled:opacity-60"
                 >
-                  {botao}
+                  {enviando ? "Aguarde..." : botao}
                 </button>
               </form>
 
-              <p className="mt-7 text-[14px] text-(--l-text-dark)">{rodape}</p>
+              <p className="mt-7 text-[14px] text-(--l-texto-2)">{rodape}</p>
             </div>
           </div>
         </div>
       </main>
 
-      <footer className="flex h-16 items-center justify-end text-[13px] text-(--l-text-dark)">
+      <footer className="flex h-16 items-center justify-end text-[13px] text-(--l-texto-2)">
         © 2026 FATECalçados · Desafio de Inovação Data System
       </footer>
     </div>
@@ -63,22 +74,25 @@ export function TelaAcesso({ titulo, subtitulo, botao, onSubmit, rodape, childre
 // Lado esquerdo: sem foto, só tipografia e os três níveis do programa (espelham regras.py).
 function PainelMarca() {
   return (
-    <aside className="relative hidden flex-col justify-between overflow-hidden bg-[linear-gradient(160deg,#2a2a2e_0%,#151517_55%,#0b0b0c_100%)] p-12 md:flex">
-      <span className="text-[17px] font-semibold tracking-[-.02em]">FATECalçados</span>
+    <aside className="relative hidden flex-col justify-between overflow-hidden bg-[linear-gradient(160deg,var(--l-painel-de)_0%,var(--l-painel-meio)_55%,var(--l-fundo)_100%)] p-12 md:flex">
+      <span className="inline-flex items-center gap-2.5 text-[17px] font-semibold tracking-[-.02em]">
+        <img src="/fatec-icon.svg" alt="" className="h-7 w-auto" />
+        FATECalçados
+      </span>
 
       <div>
-        <p className="text-[clamp(2.5rem,4.2vw,3.5rem)] leading-[1] font-semibold tracking-[-.04em] text-balance text-(--l-white)/85">
-          Cada passo vira ponto.
+        <p className="text-[clamp(2.5rem,4.2vw,3.5rem)] leading-[1] font-semibold tracking-[-.04em] text-balance text-(--l-texto)/85">
+          Cada passo vira <span className="landing-degrade">ponto.</span>
         </p>
-        <ul className="mt-10 flex gap-8 border-t border-white/10 pt-6 text-[13px] text-(--l-text-dark)">
+        <ul className="mt-10 flex gap-8 border-t border-(--l-linha) pt-6 text-[13px] text-(--l-texto-2)">
           <li>
-            <span className="block text-[15px] font-medium text-(--l-white)">Bronze</span>0%
+            <span className="block text-[15px] font-medium text-(--l-bronze)">Bronze</span>0%
           </li>
           <li>
-            <span className="block text-[15px] font-medium text-(--l-white)">Prata</span>+10%
+            <span className="block text-[15px] font-medium text-(--l-prata)">Prata</span>+10%
           </li>
           <li>
-            <span className="block text-[15px] font-medium text-(--l-white)">Ouro</span>+20%
+            <span className="block text-[15px] font-medium text-(--l-ouro)">Ouro</span>+20%
           </li>
         </ul>
       </div>
@@ -89,8 +103,8 @@ function PainelMarca() {
 type CampoProps = InputHTMLAttributes<HTMLInputElement> & { rotulo: string };
 
 const inputClass =
-  "w-full rounded-xl border border-(--l-line-dark) bg-(--l-black) px-4 py-3 text-[15px] text-(--l-white) " +
-  "placeholder:text-(--l-text-dark)/70 focus:border-(--l-text-dark) focus:outline-none";
+  "w-full rounded-xl border border-(--l-linha) bg-(--l-fundo) px-4 py-3 text-[15px] text-(--l-texto) " +
+  "placeholder:text-(--l-texto-2)/70 focus:border-(--l-vinho-claro) focus:outline-none";
 
 export function Campo({ rotulo, type, ...props }: CampoProps) {
   const [visivel, setVisivel] = useState(false);
@@ -106,7 +120,7 @@ export function Campo({ rotulo, type, ...props }: CampoProps) {
             type="button"
             onClick={() => setVisivel((v) => !v)}
             aria-label={visivel ? "Ocultar senha" : "Mostrar senha"}
-            className="absolute inset-y-0 right-0 grid w-12 place-items-center text-(--l-text-dark) transition-colors hover:text-(--l-white)"
+            className="absolute inset-y-0 right-0 grid w-12 place-items-center text-(--l-texto-2) transition-colors hover:text-(--l-texto)"
           >
             {visivel ? <EyeOff size={17} aria-hidden /> : <Eye size={17} aria-hidden />}
           </button>
@@ -118,11 +132,11 @@ export function Campo({ rotulo, type, ...props }: CampoProps) {
 
 export function LembrarDeMim() {
   return (
-    <label className="flex items-center gap-2.5 text-[14px] text-(--l-text-dark)">
-      <input type="checkbox" name="lembrar" className="size-4 accent-(--l-white)" />
+    <label className="flex items-center gap-2.5 text-[14px] text-(--l-texto-2)">
+      <input type="checkbox" name="lembrar" className="size-4 accent-(--l-vinho-claro)" />
       Lembrar de mim
     </label>
   );
 }
 
-export const linkRodape = "font-medium text-(--l-white) underline underline-offset-4";
+export const linkRodape = "font-medium text-(--l-texto) underline underline-offset-4";

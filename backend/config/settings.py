@@ -6,6 +6,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-inseguro-troque-em-producao")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = ["*"]
+# A área do cliente usa sessão + CSRF. O front (Vite, porta 5173) repassa /api ao Django, então o
+# navegador manda Origin da 5173 e o Django precisa confiar nela.
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    "DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+).split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from . import cpf as cpf_utils
 from . import indicadores, regras
-from .models import Caixa, Compra, FormaPagamento, MovimentoPontos
+from .models import Caixa, Compra, FormaPagamento, ItemCompra, MovimentoPontos
 
 Tipo = MovimentoPontos.Tipo
 
@@ -229,5 +229,51 @@ def detalhe_da_venda(compra):
                 "subtotal": float(i.preco_unitario * i.quantidade),
             }
             for i in compra.itens.select_related("produto")
+        ],
+    }
+
+
+DIAS_A_VENCER = 30
+
+
+# Feito com IA: painel da área do cliente = o perfil que a loja vê + o que interessa a quem compra:
+# quanto falta para o próximo nível (em %), pontos que vencem logo, quanto já economizou com pontos
+# e os produtos que ele mais compra (para o "compre de novo"). Só leitura, como o resto deste arquivo.
+def painel_do_cliente(cliente, agora=None):
+    agora = agora or timezone.now()
+    perfil = perfil_do_cliente(cliente, agora)
+
+    p12 = perfil["pontos_12m"]
+    proximo = perfil["proximo_nivel"]
+    progresso = 100 if proximo is None else min(100, round(100 * p12 / (p12 + proximo["faltam"])))
+
+    limite = agora + timezone.timedelta(days=DIAS_A_VENCER)
+    vencendo = [lote for lote in perfil["lotes"] if lote["expira_em"] <= limite]
+
+    economia = cliente.compras.aggregate(t=Coalesce(Sum("desconto"), Decimal("0")))["t"]
+    mais_comprados = (
+        ItemCompra.objects.filter(compra__cliente=cliente, produto__ativo=True)
+        .values("produto__sku", "produto__nome", "produto__preco")
+        .annotate(unidades=Sum("quantidade"))
+        .order_by("-unidades", "produto__nome")[:3]
+    )
+
+    return {
+        **perfil,
+        "progresso_nivel": progresso,
+        "a_vencer": {
+            "dias": DIAS_A_VENCER,
+            "pontos": sum(lote["pontos"] for lote in vencendo),
+            "proxima_data": vencendo[0]["expira_em"] if vencendo else None,
+        },
+        "economia": float(economia),
+        "mais_comprados": [
+            {
+                "sku": linha["produto__sku"],
+                "nome": linha["produto__nome"],
+                "preco": float(linha["produto__preco"]),
+                "unidades": linha["unidades"],
+            }
+            for linha in mais_comprados
         ],
     }

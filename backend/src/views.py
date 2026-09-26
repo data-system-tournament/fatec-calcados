@@ -1,10 +1,11 @@
 import json
 from datetime import date
 
+from django.contrib.auth import logout, update_session_auth_hash
 from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from . import cpf as cpf_utils
@@ -220,8 +221,11 @@ def _registrar_venda(request):
         )
     except services.RegraViolada as e:
         return _erro(str(e))
+    return JsonResponse(_resposta_da_venda(compra), status=201 if nova else 200)
 
-    resposta = {
+
+def _resposta_da_venda(compra):
+    return {
         "id": str(compra.id),
         "valor_bruto": float(compra.valor_bruto),
         "desconto": float(compra.desconto),
@@ -231,5 +235,101 @@ def _registrar_venda(request):
         "nivel_na_compra": compra.nivel_na_compra,
         "saldo_atual": services.saldo(compra.cliente) if compra.cliente else None,
     }
-    return JsonResponse(resposta, status=201 if nova else 200)
 
+
+
+# ---------- Área do cliente (/api/conta/) ----------
+# Diferente das rotas da loja, estas usam o cookie de sessão do Django e por isso NÃO são csrf_exempt:
+# o front lê o cookie `csrftoken` (enviado pelo GET /api/conta/) e o devolve no cabeçalho X-CSRFToken.
+
+def _cliente_logado(request):
+    if not request.user.is_authenticated:
+        return None
+    return Cliente.objects.select_related("loja_cadastro").filter(usuario=request.user).first()
+
+
+def _sem_sessao():
+    return _erro("Entre com seu CPF e senha.", status=401)
+
+
+@ensure_csrf_cookie
+@require_GET
+def api_conta(request):
+    cliente = _cliente_logado(request)
+    if cliente is None:
+        return _sem_sessao()
+    return JsonResponse(consultas.painel_do_cliente(cliente))
+
+
+@require_POST
+def api_conta_cadastro(request):
+    try:
+        dados = _ler_json(request)
+        cliente = services.criar_acesso(dados.get("cpf"), dados.get("nome"), dados.get("senha"))
+        services.autenticar_cliente(request, cliente.cpf, dados.get("senha"))
+    except services.RegraViolada as e:
+        return _erro(str(e))
+    return JsonResponse(consultas.painel_do_cliente(cliente), status=201)
+
+
+@require_POST
+def api_conta_entrar(request):
+    try:
+        dados = _ler_json(request)
+        cliente = services.autenticar_cliente(request, dados.get("cpf"), dados.get("senha"))
+    except services.RegraViolada as e:
+        return _erro(str(e))
+    return JsonResponse(consultas.painel_do_cliente(cliente))
+
+
+@require_POST
+def api_conta_sair(request):
+    logout(request)
+    return JsonResponse({})
+
+
+@require_POST
+def api_conta_compras(request):
+    cliente = _cliente_logado(request)
+    if cliente is None:
+        return _sem_sessao()
+    try:
+        dados = _ler_json(request)
+        compra, nova = services.comprar_online(
+            cliente,
+            itens=dados.get("itens"),
+            forma_pagamento=dados.get("forma_pagamento"),
+            pontos_resgate=dados.get("pontos_resgate", 0),
+            id=dados.get("id"),
+        )
+    except services.RegraViolada as e:
+        return _erro(str(e))
+    if compra.cliente_id != cliente.id:
+        return _erro("Compra não encontrada.", status=404)
+    return JsonResponse(_resposta_da_venda(compra), status=201 if nova else 200)
+
+
+@require_GET
+def api_conta_compra_detalhe(request, compra_id):
+    cliente = _cliente_logado(request)
+    if cliente is None:
+        return _sem_sessao()
+    compra = cliente.compras.select_related("cliente", "loja", "caixa").filter(id=compra_id).first()
+    if compra is None:
+        return _erro("Compra não encontrada.", status=404)
+    return JsonResponse(consultas.detalhe_da_venda(compra))
+
+
+@require_POST
+def api_conta_senha(request):
+    cliente = _cliente_logado(request)
+    if cliente is None:
+        return _sem_sessao()
+    try:
+        dados = _ler_json(request)
+        usuario = services.alterar_senha(cliente, dados.get("senha_atual"), dados.get("nova_senha"))
+    except services.RegraViolada as e:
+        return _erro(str(e))
+    # Sem isso a troca de senha encerraria a sessão atual.
+    update_session_auth_hash(request, usuario)
+    return JsonResponse({})

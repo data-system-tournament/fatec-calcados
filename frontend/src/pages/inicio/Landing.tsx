@@ -2,33 +2,47 @@ import { ArrowRight, Layers, Plus, Star, ShieldCheck, ShoppingBag, Ticket, Trend
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useProgressoScroll } from "../../hooks/useProgressoScroll";
+import { BotaoTema } from "./BotaoTema";
 
 // Feito com IA: todo número desta página espelha `backend/src/regras.py` (níveis, bônus, bloco de
 // resgate, validade). São texto de vitrine, não regra: se as regras mudarem, atualize aqui junto.
 
-const CARTAS: { titulo: string; texto: string; Icone: LucideIcon }[] = [
-  { titulo: "Compre", texto: "Cada real pago vira 1 ponto. Basta o CPF no caixa.", Icone: ShoppingBag },
-  { titulo: "Acumule", texto: "Cada compra gera um lote de pontos válido por 12 meses.", Icone: Layers },
-  { titulo: "Suba de nível", texto: "Prata soma +10% e Ouro +20% em cada compra.", Icone: TrendingUp },
-  { titulo: "Resgate", texto: "A cada 100 pontos, R$ 5,00 de desconto.", Icone: Ticket },
-  { titulo: "Sem cair", texto: "O nível conta o que você acumulou, não o saldo.", Icone: ShieldCheck },
+// Cada carta tem a sua cor (quadradinho do ícone). As classes ficam escritas por inteiro para o Tailwind achá-las.
+const CARTAS: { titulo: string; texto: string; Icone: LucideIcon; cor: string }[] = [
+  { titulo: "Compre", texto: "Cada real pago vira 1 ponto. Basta o CPF no caixa.", Icone: ShoppingBag, cor: "bg-(--l-laranja-fundo) text-(--l-laranja)" },
+  { titulo: "Acumule", texto: "Cada compra gera um lote de pontos válido por 12 meses.", Icone: Layers, cor: "bg-(--l-azul-fundo) text-(--l-azul)" },
+  { titulo: "Suba de nível", texto: "Prata soma +10% e Ouro +20% em cada compra.", Icone: TrendingUp, cor: "bg-(--l-esmeralda-fundo) text-(--l-esmeralda)" },
+  { titulo: "Resgate", texto: "A cada 100 pontos, R$ 5,00 de desconto.", Icone: Ticket, cor: "bg-(--l-ambar-fundo) text-(--l-ambar)" },
+  { titulo: "Sem cair", texto: "O nível conta o que você acumulou, não o saldo.", Icone: ShieldCheck, cor: "bg-(--l-violeta-fundo) text-(--l-violeta)" },
 ];
 
+// Cada nível na sua cor (bronze, prata, ouro): a bolinha, o nome e o bônus no hover.
 const NIVEIS = [
-  { nome: "Bronze", requisito: "Ao se cadastrar", bonus: "0%" },
-  { nome: "Prata", requisito: "1.000 pontos em 12 meses", bonus: "+10%" },
-  { nome: "Ouro", requisito: "5.000 pontos em 12 meses", bonus: "+20%" },
+  { nome: "Bronze", requisito: "Ao se cadastrar", bonus: "0%", cor: "text-(--l-bronze)", bolinha: "bg-(--l-bronze)", hover: "group-hover:text-(--l-bronze)" },
+  { nome: "Prata", requisito: "1.000 pontos em 12 meses", bonus: "+10%", cor: "text-(--l-prata)", bolinha: "bg-(--l-prata)", hover: "group-hover:text-(--l-prata)" },
+  { nome: "Ouro", requisito: "5.000 pontos em 12 meses", bonus: "+20%", cor: "text-(--l-ouro)", bolinha: "bg-(--l-ouro)", hover: "group-hover:text-(--l-ouro)" },
 ];
 
-// Texto que acende palavra por palavra no scroll. As palavras com * ficam em vinho.
+const COR_DO_NIVEL: Record<string, string> = {
+  Bronze: "border-(--l-bronze)/40 text-(--l-bronze)",
+  Prata: "border-(--l-prata)/40 text-(--l-prata)",
+  Ouro: "border-(--l-ouro)/40 text-(--l-ouro)",
+};
+
+// Texto que acende palavra por palavra no scroll. As palavras com * ficam no degradê da marca.
 const MANIFESTO =
   "Cada real vira ponto. Cada ponto vira desconto. E quem volta sempre *ganha* *mais* em cada compra.";
 
 const container = "mx-auto w-full max-w-[1120px] px-6 sm:px-10";
 const titulo = "text-[clamp(2.25rem,6vw,4rem)] leading-[1.02] font-semibold tracking-[-.035em] text-balance";
 const botao =
-  "inline-flex items-center gap-2 rounded-full bg-(--l-white) px-7 py-4 text-[15px] font-medium text-(--l-black) " +
-  "transition-[gap,background-color] duration-200 hover:gap-3 hover:bg-white";
+  "inline-flex items-center gap-2 rounded-full bg-(--l-texto) px-7 py-4 text-[15px] font-medium text-(--l-fundo) " +
+  "transition-[gap,opacity] duration-200 hover:gap-3 hover:opacity-90";
+
+// No bloco vinho do fim o botão é sempre branco, nos dois temas.
+const botaoSobreVinho =
+  "inline-flex items-center gap-2 rounded-full bg-white px-7 py-4 text-[15px] font-medium text-[#0b0b0c] " +
+  "transition-[gap,opacity] duration-200 hover:gap-3 hover:opacity-90";
 
 const limitar = (v: number) => Math.min(1, Math.max(0, v));
 const suavizar = (t: number) => 1 - Math.pow(1 - t, 3);
@@ -38,16 +52,21 @@ export default function Landing() {
     <div className="landing min-h-svh">
       <header className="absolute inset-x-0 top-0 z-10">
         <div className={`${container} flex h-24 items-center justify-between`}>
-          <Link to="/" className="text-[17px] font-semibold tracking-[-.02em]">
+          <Link to="/" className="inline-flex items-center gap-2.5 text-[17px] font-semibold tracking-[-.02em]">
+            <img src="/fatec-icon.svg" alt="" className="h-7 w-auto" />
             FATECalçados
           </Link>
-          <nav className="flex items-center gap-6 text-[14px]">
-            <Link to="/dashboard" className="text-(--l-text-dark) transition-colors hover:text-(--l-white)">
+          <nav className="flex items-center gap-4 text-[14px] sm:gap-6">
+            <BotaoTema />
+            <Link to="/dashboard" className="text-(--l-texto-2) transition-colors hover:text-(--l-texto) max-sm:hidden">
+              Área da loja
+            </Link>
+            <Link to="/login" className="text-(--l-texto-2) transition-colors hover:text-(--l-texto)">
               Entrar
             </Link>
             <Link
-              to="/dashboard"
-              className="rounded-full border border-(--l-line-dark) px-4 py-2 font-medium transition-colors hover:border-(--l-vinho-claro)"
+              to="/cadastro"
+              className="rounded-full border border-(--l-linha) px-4 py-2 font-medium transition-colors hover:border-(--l-vinho-claro)"
             >
               Criar conta
             </Link>
@@ -57,20 +76,24 @@ export default function Landing() {
 
       <main>
         <section className="relative overflow-hidden pt-44 pb-28 sm:pt-60 sm:pb-40">
-          {/* Brilho vinho atrás do título, que flutua devagar (landing-brilho em index.css). */}
+          {/* Brilhos vinho e âmbar atrás do título, que flutuam devagar (landing-brilho em index.css). */}
           <div
             aria-hidden
-            className="landing-brilho pointer-events-none absolute -top-40 right-[-10%] size-[720px] rounded-full bg-[radial-gradient(closest-side,rgba(125,26,40,.6),transparent)] blur-2xl"
+            className="landing-brilho pointer-events-none absolute -top-40 right-[-10%] size-[720px] rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--l-vinho-claro)_45%,transparent),transparent)] blur-2xl"
+          />
+          <div
+            aria-hidden
+            className="landing-brilho pointer-events-none absolute top-40 right-[25%] size-[420px] rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--l-ambar)_30%,transparent),transparent)] blur-2xl [animation-delay:-7s]"
           />
           <div className={`${container} relative`}>
             <h1
               className="landing-sobe max-w-[10ch] text-[clamp(3.25rem,11vw,6rem)] leading-[.96] font-semibold tracking-[-.04em] text-balance"
               style={{ "--i": 0 } as CSSProperties}
             >
-              Cada passo vira <span className="text-(--l-vinho-claro)">ponto.</span>
+              Cada passo vira <span className="landing-degrade">ponto.</span>
             </h1>
             <p
-              className="landing-sobe mt-8 max-w-[38ch] text-[clamp(1.05rem,1.6vw,1.25rem)] text-(--l-text-dark)"
+              className="landing-sobe mt-8 max-w-[38ch] text-[clamp(1.05rem,1.6vw,1.25rem)] text-(--l-texto-2)"
               style={{ "--i": 1 } as CSSProperties}
             >
               O programa de fidelidade da FATECalçados. Compre, acumule e troque por desconto.
@@ -79,7 +102,7 @@ export default function Landing() {
               <Link to="/pdv" className={botao}>
                 Abrir o PDV <ArrowRight size={18} aria-hidden />
               </Link>
-              <a href="#como-funciona" className="text-[15px] text-(--l-text-dark) transition-colors hover:text-(--l-white)">
+              <a href="#como-funciona" className="text-[15px] text-(--l-texto-2) transition-colors hover:text-(--l-texto)">
                 Como funciona
               </a>
             </div>
@@ -96,17 +119,20 @@ export default function Landing() {
               {NIVEIS.map((n) => (
                 <li
                   key={n.nome}
-                  className="group grid items-baseline gap-x-8 gap-y-1 border-t border-(--l-line-dark) py-9 last:border-b sm:grid-cols-[1fr_1.4fr_auto] sm:py-12"
+                  className="group grid items-baseline gap-x-8 gap-y-1 border-t border-(--l-linha) py-9 last:border-b sm:grid-cols-[1fr_1.4fr_auto] sm:py-12"
                 >
-                  <h3 className="text-[clamp(1.75rem,4vw,2.75rem)] leading-none font-semibold tracking-[-.03em]">{n.nome}</h3>
-                  <p className="text-(--l-text-dark)">{n.requisito}</p>
-                  <p className="text-[clamp(1.75rem,4vw,2.75rem)] leading-none font-semibold tracking-[-.03em] tabular-nums transition-colors duration-300 group-hover:text-(--l-vinho-claro) sm:text-right">
+                  <h3 className={`flex items-center gap-4 text-[clamp(1.75rem,4vw,2.75rem)] leading-none font-semibold tracking-[-.03em] ${n.cor}`}>
+                    <span aria-hidden className={`size-3 flex-none rounded-full ${n.bolinha}`} />
+                    {n.nome}
+                  </h3>
+                  <p className="text-(--l-texto-2)">{n.requisito}</p>
+                  <p className={`text-[clamp(1.75rem,4vw,2.75rem)] leading-none font-semibold tracking-[-.03em] tabular-nums transition-colors duration-300 sm:text-right ${n.hover}`}>
                     {n.bonus}
                   </p>
                 </li>
               ))}
             </ul>
-            <p className="mt-8 max-w-[52ch] text-[15px] text-(--l-text-dark)">
+            <p className="mt-8 max-w-[52ch] text-[15px] text-(--l-texto-2)">
               O bônus usa o nível de antes da compra, sobre o valor pago sem os centavos. No resgate, os pontos
               mais antigos são usados primeiro.
             </p>
@@ -116,11 +142,11 @@ export default function Landing() {
         <Avaliacoes />
         <Perguntas />
 
-        <section className="bg-(--l-vinho) py-28 sm:py-36">
+        <section className="bg-[linear-gradient(120deg,#5a0f1c_0%,var(--l-vinho)_45%,#b8452a_100%)] py-28 text-white sm:py-36">
           <div className={container}>
             <h2 className={`${titulo} max-w-[12ch]`}>Comece pelo caixa.</h2>
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
-              <Link to="/pdv" className={botao}>
+              <Link to="/pdv" className={botaoSobreVinho}>
                 Abrir o PDV <ArrowRight size={18} aria-hidden />
               </Link>
               <Link to="/dashboard" className="text-[15px] text-white/75 transition-colors hover:text-white">
@@ -132,8 +158,11 @@ export default function Landing() {
       </main>
 
       <footer className="py-10">
-        <div className={`${container} flex flex-wrap items-center justify-between gap-4 text-[14px] text-(--l-text-dark)`}>
-          <span>FATECalçados</span>
+        <div className={`${container} flex flex-wrap items-center justify-between gap-4 text-[14px] text-(--l-texto-2)`}>
+          <span className="inline-flex items-center gap-2">
+            <img src="/fatec-icon.svg" alt="" className="h-5 w-auto" />
+            FATECalçados
+          </span>
           <span>Desafio de Inovação Data System 2026</span>
         </div>
       </footer>
@@ -141,15 +170,15 @@ export default function Landing() {
   );
 }
 
-function Carta({ titulo, texto, Icone }: (typeof CARTAS)[number]) {
+function Carta({ titulo, texto, Icone, cor }: (typeof CARTAS)[number]) {
   return (
-    <div className="flex h-full flex-col justify-between rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#232326,#141416)] p-6 shadow-[0_24px_48px_rgba(0,0,0,.45)]">
-      <span className="grid size-11 place-items-center rounded-xl bg-(--l-vinho-escuro) text-(--l-vinho-claro)">
+    <div className="flex h-full flex-col justify-between rounded-2xl border border-(--l-borda-carta) bg-[linear-gradient(160deg,var(--l-carta-de),var(--l-carta-ate))] p-6 shadow-(--l-sombra)">
+      <span className={`grid size-11 place-items-center rounded-xl ${cor}`}>
         <Icone size={20} aria-hidden />
       </span>
       <div>
         <h3 className="text-xl font-semibold tracking-[-.02em]">{titulo}</h3>
-        <p className="mt-2 text-[14px] leading-snug text-(--l-text-dark)">{texto}</p>
+        <p className="mt-2 text-[14px] leading-snug text-(--l-texto-2)">{texto}</p>
       </div>
     </div>
   );
@@ -230,7 +259,7 @@ function Manifesto() {
             return (
               <span
                 key={i}
-                className={destaque ? "text-(--l-vinho-claro)" : "text-(--l-white)"}
+                className={destaque ? "landing-degrade" : "text-(--l-texto)"}
                 style={{ opacity: 0.16 + 0.84 * luz, transition: "opacity .15s linear" }}
               >
                 {palavra}{" "}
@@ -280,11 +309,11 @@ const AVALIACOES = [
 
 function Avaliacoes() {
   return (
-    <section className="border-t border-(--l-line-dark) py-28 sm:py-40">
+    <section className="border-t border-(--l-linha) py-28 sm:py-40">
       <div className={container}>
         <div className="flex flex-wrap items-end justify-between gap-6">
           <h2 className={`${titulo} max-w-[13ch]`}>Quem compra, volta.</h2>
-          <p className="max-w-[34ch] text-[14px] text-(--l-text-dark)">
+          <p className="max-w-[34ch] text-[14px] text-(--l-texto-2)">
             Avaliações simuladas, criadas para demonstrar o programa. Não são de clientes reais.
           </p>
         </div>
@@ -292,9 +321,9 @@ function Avaliacoes() {
           {AVALIACOES.map((a) => (
             <li
               key={a.nome}
-              className="mb-4 break-inside-avoid rounded-2xl border border-white/8 bg-(--l-black-2) p-7 transition-colors duration-300 hover:border-(--l-vinho)"
+              className="mb-4 break-inside-avoid rounded-2xl border border-(--l-borda-carta) bg-(--l-fundo-2) p-7 transition-colors duration-300 hover:border-(--l-vinho-claro)"
             >
-              <div className="flex gap-1 text-(--l-vinho-claro)" aria-label="5 de 5 estrelas">
+              <div className="flex gap-1 text-(--l-ambar)" aria-label="5 de 5 estrelas">
                 {Array.from({ length: 5 }, (_, i) => (
                   <Star key={i} size={15} fill="currentColor" strokeWidth={0} aria-hidden />
                 ))}
@@ -302,7 +331,7 @@ function Avaliacoes() {
               <p className="mt-5 text-[16px] leading-relaxed">“{a.texto}”</p>
               <p className="mt-6 flex items-center justify-between text-[14px]">
                 <span className="font-medium">{a.nome}</span>
-                <span className="rounded-full border border-(--l-line-dark) px-2.5 py-0.5 text-[12px] text-(--l-text-dark)">
+                <span className={`rounded-full border px-2.5 py-0.5 text-[12px] font-medium ${COR_DO_NIVEL[a.nivel]}`}>
                   Cliente {a.nivel}
                 </span>
               </p>
@@ -328,14 +357,14 @@ function Perguntas() {
     <section className="py-28 sm:py-40">
       <div className={`${container} grid gap-14 lg:grid-cols-[5fr_7fr]`}>
         <h2 className={`${titulo} max-w-[10ch]`}>Perguntas frequentes.</h2>
-        <div className="border-b border-(--l-line-dark)">
+        <div className="border-b border-(--l-linha)">
           {PERGUNTAS.map(([pergunta, resposta]) => (
-            <details key={pergunta} className="group border-t border-(--l-line-dark)">
+            <details key={pergunta} className="group border-t border-(--l-linha)">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-6 text-[18px] font-medium tracking-[-.01em] transition-colors hover:text-(--l-vinho-claro) [&::-webkit-details-marker]:hidden">
                 {pergunta}
-                <Plus size={20} aria-hidden className="flex-none text-(--l-text-dark) transition-transform duration-300 group-open:rotate-45" />
+                <Plus size={20} aria-hidden className="flex-none text-(--l-texto-2) transition-transform duration-300 group-open:rotate-45" />
               </summary>
-              <p className="max-w-[60ch] pb-6 text-(--l-text-dark)">{resposta}</p>
+              <p className="max-w-[60ch] pb-6 text-(--l-texto-2)">{resposta}</p>
             </details>
           ))}
         </div>

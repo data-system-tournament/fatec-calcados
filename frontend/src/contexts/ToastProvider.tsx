@@ -21,6 +21,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={notify}>
       {children}
       {toast && <Toast key={toast.id} message={toast.message} />}
+      {/* Feito com IA: região viva montada desde o início. Leitores de tela costumam ignorar uma região
+          role="status" que já nasce com texto, então o aviso é escrito aqui dentro, e não num elemento novo. */}
+      <div role="status" className="sr-only">{toast?.message}</div>
     </ToastContext.Provider>
   );
 }

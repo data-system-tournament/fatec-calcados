@@ -5,7 +5,7 @@ import type { Client } from "../../types";
 import { formatMoney, formatNumber } from "../../utils/format";
 import Secao from "./Secao";
 
-const noteClass = "text-xs text-faint";
+const noteClass = "text-xs text-muted";
 
 type PointsPanelProps = {
   client: Client;

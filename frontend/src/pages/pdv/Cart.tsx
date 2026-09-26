@@ -30,20 +30,23 @@ function Cart({ items, selectedSku, onSelect, onChangeQuantity, onRemove }: Cart
 
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[14px] font-medium">{item.product.name}</span>
-              <small className="block text-xs text-faint tabular-nums">
+              <small className="block text-xs text-muted tabular-nums">
                 {formatMoney(item.product.price)} un. · {item.sku}
               </small>
             </span>
 
             <span
               className="flex flex-none items-center rounded-lg border border-line-2 bg-bg p-0.5"
+              role="group"
+              aria-label={`Quantidade de ${item.product.name}`}
               onClick={(event) => event.stopPropagation()}
             >
-              <QuantityButton label="Diminuir" disabled={item.quantity <= 1} onClick={() => onChangeQuantity(item.sku, -1)}>
+              <QuantityButton label={`Tirar um ${item.product.name}`} disabled={item.quantity <= 1} onClick={() => onChangeQuantity(item.sku, -1)}>
                 <Minus size={14} aria-hidden />
               </QuantityButton>
-              <b className="min-w-7 text-center text-[14px] font-semibold tabular-nums">{item.quantity}</b>
-              <QuantityButton label="Aumentar" onClick={() => onChangeQuantity(item.sku, 1)}>
+              {/* aria-live: quem usa leitor de tela ouve a nova quantidade depois de apertar − ou +. */}
+              <b className="min-w-7 text-center text-[14px] font-semibold tabular-nums" aria-live="polite">{item.quantity}</b>
+              <QuantityButton label={`Mais um ${item.product.name}`} onClick={() => onChangeQuantity(item.sku, 1)}>
                 <Plus size={14} aria-hidden />
               </QuantityButton>
             </span>
@@ -61,7 +64,7 @@ function Cart({ items, selectedSku, onSelect, onChangeQuantity, onRemove }: Cart
                 onRemove(item.sku);
               }}
             >
-              <Trash2 size={16} />
+              <Trash2 size={16} aria-hidden />
             </button>
           </li>
         );

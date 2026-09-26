@@ -11,12 +11,12 @@ type PaginationProps = {
 // Rodapé de listas paginadas: "40 clientes · página 1 de 2" e os botões Anterior/Próxima.
 export function Pagination({ page, pages, total, noun, onChange }: PaginationProps) {
   return (
-    <div className="mt-3.5 flex items-center justify-between gap-3 text-[13px] text-muted">
-      <span>{total} {total === 1 ? noun[0] : noun[1]} · página {page} de {pages}</span>
+    <nav aria-label="Paginação" className="mt-3.5 flex items-center justify-between gap-3 text-[13px] text-muted">
+      <span aria-live="polite">{total} {total === 1 ? noun[0] : noun[1]} · página {page} de {pages}</span>
       <div className="flex gap-1.5">
-        <Button size="sm" disabled={page <= 1} onClick={() => onChange(page - 1)}>Anterior</Button>
-        <Button size="sm" disabled={page >= pages} onClick={() => onChange(page + 1)}>Próxima</Button>
+        <Button size="sm" disabled={page <= 1} aria-label="Página anterior" onClick={() => onChange(page - 1)}>Anterior</Button>
+        <Button size="sm" disabled={page >= pages} aria-label="Próxima página" onClick={() => onChange(page + 1)}>Próxima</Button>
       </div>
-    </div>
+    </nav>
   );
 }

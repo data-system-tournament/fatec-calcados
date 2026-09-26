@@ -38,9 +38,9 @@ function Perfil({ client }: { client: ClientProfile }) {
     <>
       <Card className="flex flex-wrap items-center justify-between gap-4 p-[18px]">
         <div>
-          <h1 className="flex flex-wrap items-center gap-2.5 text-xl font-semibold tracking-[-.015em]">
+          <h2 className="flex flex-wrap items-center gap-2.5 text-xl font-semibold tracking-[-.015em]">
             {client.name} <LevelBadge level={client.level} />
-          </h1>
+          </h2>
           <p className="mt-1 text-[13px] text-muted">
             CPF {client.cpf} · cliente desde {formatDay(client.registeredAt)}
             {client.registeredStore && ` · cadastrado na ${client.registeredStore}`}
@@ -81,7 +81,7 @@ function Perfil({ client }: { client: ClientProfile }) {
             <ul className="max-h-64 overflow-auto pr-2">
               {client.movements.map((movement, index) => (
                 <li key={`${movement.date}-${index}`} className="flex justify-between border-b border-line py-2 text-[13px] first:pt-0 last:border-0 last:pb-0">
-                  <span>{MOVEMENT_LABELS[movement.type]}<small className="ml-2 text-xs text-faint">{formatDay(movement.date)}</small></span>
+                  <span>{MOVEMENT_LABELS[movement.type]}<small className="ml-2 text-xs text-muted">{formatDay(movement.date)}</small></span>
                   <b className={`font-semibold ${movement.points > 0 ? "text-ok" : "text-danger"}`}>
                     {movement.points > 0 ? "+" : "−"}{formatNumber(Math.abs(movement.points))}
                   </b>
@@ -126,7 +126,7 @@ function Perfil({ client }: { client: ClientProfile }) {
                     <td className={`${tdClass} text-right`}>
                       {purchase.pointsEarned > 0 && <span className="text-ok">+{formatNumber(purchase.pointsEarned)}</span>}
                       {purchase.pointsRedeemed > 0 && <span className="ml-1.5 text-danger">−{formatNumber(purchase.pointsRedeemed)}</span>}
-                      {purchase.pointsEarned === 0 && purchase.pointsRedeemed === 0 && <span className="text-faint">—</span>}
+                      {purchase.pointsEarned === 0 && purchase.pointsRedeemed === 0 && <span className="text-muted">—</span>}
                     </td>
                   </tr>
                 ))}
@@ -162,7 +162,7 @@ function LevelProgress({ client }: { client: ClientProfile }) {
       >
         <div className="h-full rounded-full bg-ink" style={{ width: `${percent}%` }} />
       </div>
-      <small className="text-xs text-faint">
+      <small className="text-xs text-muted">
         {next ? `Faltam ${formatNumber(next.missing)} pts para o nível ${next.name}` : "Nível máximo"}
       </small>
     </div>
@@ -174,7 +174,7 @@ function Stat({ label, value, detail, first = false }: { label: string; value: s
     <div className={`flex flex-col gap-1 px-5 py-[18px] max-[860px]:px-4 max-[860px]:py-3.5 ${first ? "" : "border-l border-line"}`}>
       <span className="text-[13px] text-muted">{label}</span>
       <strong className="text-[24px] leading-[1.2] font-semibold tracking-[-.02em] max-[860px]:text-[20px]">{value}</strong>
-      <small className="text-xs text-faint">{detail}</small>
+      <small className="text-xs text-muted">{detail}</small>
     </div>
   );
 }

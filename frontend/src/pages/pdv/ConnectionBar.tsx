@@ -25,14 +25,14 @@ function ConnectionBar({ openedAt, online, pendingSales, onToggle }: ConnectionB
           onClick={onToggle}
           className="ml-auto inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[12.5px] font-medium text-muted transition-colors hover:bg-subtle hover:text-ink"
         >
-          {online ? <WifiOff size={14} className="flex-none" /> : <Wifi size={14} className="flex-none" />}
+          {online ? <WifiOff size={14} className="flex-none" aria-hidden="true" /> : <Wifi size={14} className="flex-none" aria-hidden="true" />}
           {online ? "Simular queda de internet" : "Reconectar"}
         </button>
       </div>
 
       {!online && (
         <div className="flex items-center gap-2.5 rounded-[10px] bg-accent-soft px-3.5 py-2.5 text-[13px] font-medium text-accent-ink" role="status">
-          <WifiOff size={16} className="flex-none" />
+          <WifiOff size={16} className="flex-none" aria-hidden="true" />
           Sem internet. Vendas salvas neste caixa ({pendingSales} {plural(pendingSales, "pendente", "pendentes")}).
           Sincroniza sozinho quando a conexão voltar.
         </div>

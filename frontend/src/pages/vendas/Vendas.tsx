@@ -123,7 +123,7 @@ function Vendas() {
                       <td className={tdClass}>
                         {sale.client
                           ? <Link to={`/clientes/${sale.client.id}`} className="underline-offset-[3px] hover:underline">{sale.client.name}</Link>
-                          : <span className="text-faint">Sem CPF</span>}
+                          : <span className="text-muted">Sem CPF</span>}
                       </td>
                       <td className={tdClass}>{sale.register ?? "—"}</td>
                       <td className={tdClass}>{paymentLabel(sale.payment)}</td>
@@ -132,7 +132,7 @@ function Vendas() {
                       <td className={`${tdClass} text-right`}>
                         {sale.pointsEarned > 0 && <span className="text-ok">+{formatNumber(sale.pointsEarned)}</span>}
                         {sale.pointsRedeemed > 0 && <span className="ml-1.5 text-danger">−{formatNumber(sale.pointsRedeemed)}</span>}
-                        {sale.pointsEarned === 0 && sale.pointsRedeemed === 0 && <span className="text-faint">—</span>}
+                        {sale.pointsEarned === 0 && sale.pointsRedeemed === 0 && <span className="text-muted">—</span>}
                       </td>
                     </tr>
                   ))}

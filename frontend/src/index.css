@@ -9,7 +9,7 @@
   --ink: #18181B;
   --ink-2: #3F3F46;
   --muted: #71717A;
-  --faint: #A1A1AA;
+  --faint: #8C8C95;
   --line: #E7E7EA;
   --line-2: #D4D4D8;
   --accent: #F2C12E;
@@ -161,7 +161,7 @@
   body {
     background: var(--color-bg);
     color: var(--color-ink);
-    font: 14px/1.5 var(--font-sans);
+    font: calc(14px * var(--escala-fonte)) / 1.5 var(--font-sans);
     -webkit-font-smoothing: antialiased;
     font-feature-settings: "tnum" 1, "cv11" 1;
   }
@@ -183,6 +183,128 @@
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Configurações de acessibilidade (painel "Acessibilidade" da sidebar, hooks/useAcessibilidade.ts).
+   Cada opção é um atributo no <html>, aplicado antes da primeira pintura pelo script do index.html. */
+
+/* Tamanho da letra. Feito com IA: o app usa tamanhos fixos em px (text-[13px]...), que não seguem o
+   font-size da raiz; por isso cada tamanho em uso é refeito aqui multiplicado por --escala-fonte.
+   Fora de @layer, estas regras vencem as utilidades do Tailwind. Ao usar um tamanho novo, inclua-o. */
+:root {
+  --escala-fonte: 1;
+  --text-xs: calc(.75rem * var(--escala-fonte));
+  --text-sm: calc(.875rem * var(--escala-fonte));
+  --text-base: calc(1rem * var(--escala-fonte));
+  --text-lg: calc(1.125rem * var(--escala-fonte));
+  --text-xl: calc(1.25rem * var(--escala-fonte));
+}
+
+:root[data-fonte="grande"] {
+  --escala-fonte: 1.15;
+}
+
+:root[data-fonte="muito-grande"] {
+  --escala-fonte: 1.3;
+}
+
+.text-\[11px\] { font-size: calc(11px * var(--escala-fonte)); }
+.text-\[11\.5px\] { font-size: calc(11.5px * var(--escala-fonte)); }
+.text-\[12px\] { font-size: calc(12px * var(--escala-fonte)); }
+.text-\[12\.5px\] { font-size: calc(12.5px * var(--escala-fonte)); }
+.text-\[13px\], .focus\:text-\[13px\]:focus { font-size: calc(13px * var(--escala-fonte)); }
+.text-\[13\.5px\] { font-size: calc(13.5px * var(--escala-fonte)); }
+.text-\[14px\] { font-size: calc(14px * var(--escala-fonte)); }
+.text-\[15px\] { font-size: calc(15px * var(--escala-fonte)); }
+.text-\[16px\] { font-size: calc(16px * var(--escala-fonte)); }
+.text-\[17px\] { font-size: calc(17px * var(--escala-fonte)); }
+.text-\[18px\] { font-size: calc(18px * var(--escala-fonte)); }
+.text-\[20px\] { font-size: calc(20px * var(--escala-fonte)); }
+.text-\[22px\] { font-size: calc(22px * var(--escala-fonte)); }
+.text-\[24px\] { font-size: calc(24px * var(--escala-fonte)); }
+.text-\[28px\] { font-size: calc(28px * var(--escala-fonte)); }
+.text-\[32px\] { font-size: calc(32px * var(--escala-fonte)); }
+.text-\[2rem\] { font-size: calc(2rem * var(--escala-fonte)); }
+
+@media (width < 860px) {
+  .max-\[860px\]\:text-\[20px\] { font-size: calc(20px * var(--escala-fonte)); }
+  .max-\[860px\]\:text-\[24px\] { font-size: calc(24px * var(--escala-fonte)); }
+}
+
+/* Alto contraste: texto secundário quase da cor do principal, bordas visíveis e foco mais grosso.
+   Mesmos tokens no claro e no escuro, para o escuro (mais específico) sempre vencer quando ativo. */
+:root[data-contraste="alto"] {
+  --ink: #000;
+  --ink-2: #18181B;
+  --muted: #3F3F46;
+  --faint: #52525B;
+  --line: #A1A1AA;
+  --line-2: #71717A;
+  --accent-ink: #5C4300;
+  --app: #1D4ED8;
+  --ok: #0F5F2C;
+  --danger: #A31F1F;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-contraste="alto"]:not([data-theme="light"]) {
+    --ink: #fff;
+    --ink-2: #F4F4F5;
+    --muted: #D4D4D8;
+    --faint: #A1A1AA;
+    --line: #52525B;
+    --line-2: #71717A;
+    --accent-ink: #FFD95A;
+    --app: #A5BBFF;
+    --ok: #86EFAC;
+    --danger: #FCA5A5;
+  }
+}
+
+:root[data-contraste="alto"][data-theme="dark"] {
+  --ink: #fff;
+  --ink-2: #F4F4F5;
+  --muted: #D4D4D8;
+  --faint: #A1A1AA;
+  --line: #52525B;
+  --line-2: #71717A;
+  --accent-ink: #FFD95A;
+  --app: #A5BBFF;
+  --ok: #86EFAC;
+  --danger: #FCA5A5;
+}
+
+:root[data-contraste="alto"] :focus-visible {
+  outline-width: 3px;
+  outline-offset: 3px;
+}
+
+/* Espaçamento de texto (WCAG 1.4.12): mais espaço entre linhas, letras e palavras. */
+:root[data-espacamento="amplo"] body {
+  line-height: 1.8;
+  letter-spacing: .03em;
+  word-spacing: .12em;
+}
+
+:root[data-espacamento="amplo"] p,
+:root[data-espacamento="amplo"] li {
+  line-height: 1.8;
+}
+
+/* Reduzir animações, mesmo que o sistema não peça. */
+:root[data-movimento="reduzido"] *,
+:root[data-movimento="reduzido"] *::before,
+:root[data-movimento="reduzido"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* Sublinhar links do conteúdo (a sidebar já se distingue pela posição e pelos ícones). */
+:root[data-links="sublinhados"] #conteudo a,
+:root[data-links="sublinhados"] .landing a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Landing page (rota "/"). Paleta própria em preto e cinza, fixa: não segue o tema claro/escuro do app,

@@ -57,7 +57,7 @@ function Detail({ sale }: { sale: SaleDetail }) {
             {sale.items.map((item) => (
               <tr key={item.sku}>
                 <td className={`${tdClass} whitespace-normal`}>
-                  {item.name}<small className="block text-xs text-faint">{formatMoney(item.unitPrice)} un.</small>
+                  {item.name}<small className="block text-xs text-muted">{formatMoney(item.unitPrice)} un.</small>
                 </td>
                 <td className={`${tdClass} text-right`}>{item.quantity}</td>
                 <td className={`${tdClass} text-right`}>{formatMoney(item.subtotal)}</td>

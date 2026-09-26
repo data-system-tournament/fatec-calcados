@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useMatch } from "react-router-dom";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PainelAcessibilidade } from "../components/layout/PainelAcessibilidade";
 import { SearchPalette } from "../components/layout/SearchPalette";
 import { Sidebar } from "../components/layout/Sidebar";
 import { tituloDaRota } from "../components/layout/navegacao";
@@ -12,6 +13,7 @@ import { CaixaProvider } from "../contexts/CaixaProvider";
 import { ToastProvider } from "../contexts/ToastProvider";
 import { useAtalhoBusca } from "../hooks/useAtalhoBusca";
 import { useSidebar } from "../hooks/useSidebar";
+import { useTituloDaRota } from "../hooks/useTituloDaRota";
 import { useTour } from "../hooks/useTour";
 import { todayLabel } from "../utils/format";
 
@@ -35,8 +37,12 @@ function Shell() {
   const isPdv = useMatch("/pdv") !== null;
   const { pathname } = useLocation();
   const [searching, setSearching] = useState(false);
+  const [ajustando, setAjustando] = useState(false);
   const sidebar = useSidebar();
   const title = tituloDaRota(pathname);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+
+  useTituloDaRota(title, titleRef);
 
   useAtalhoBusca(() => setSearching(true));
 
@@ -62,6 +68,14 @@ function Shell() {
 
   return (
     <div className="flex min-h-full">
+      {/* Primeira parada do Tab: pula a sidebar e vai direto para a tela. Só aparece ao receber foco. */}
+      <a
+        href="#conteudo"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:rounded-md focus:bg-ink focus:px-3 focus:py-2 focus:text-[13px] focus:font-medium focus:text-surface focus:shadow-pop"
+      >
+        Pular para o conteúdo
+      </a>
+
       {sidebar.mobile && sidebar.open && (
         <div className="fixed inset-0 z-30 bg-[rgba(9,9,11,.4)]" onClick={sidebar.close} aria-hidden="true" />
       )}
@@ -74,6 +88,7 @@ function Shell() {
           onSearch={handleSearch}
           onNavigate={sidebar.mobile ? sidebar.close : undefined}
           onTour={tour.iniciar}
+          onAcessibilidade={() => setAjustando(true)}
         />
       </aside>
 
@@ -93,20 +108,26 @@ function Shell() {
           <div className="flex min-w-0 items-center gap-2 text-sm text-muted">
             <span className="truncate max-[860px]:hidden">{STORE_NAME}</span>
             {title && <span aria-hidden="true" className="max-[860px]:hidden">/</span>}
-            <span className="truncate font-medium text-ink">{title}</span>
+            {/* O <h1> de cada tela: recebe o foco quando a rota muda (ver useTituloDaRota). */}
+            {title && <h1 ref={titleRef} tabIndex={-1} className="truncate font-medium text-ink outline-none">{title}</h1>}
           </div>
 
           <span className="ml-auto text-[13px] text-muted max-[860px]:hidden">{todayLabel()}</span>
         </header>
 
         <main
-          className={`w-full min-w-0 flex-1 px-6 pt-6 max-[860px]:px-4 max-[860px]:pt-[18px] ${isPdv ? "pb-[18px]" : "pb-10"}`}
+          id="conteudo"
+          tabIndex={-1}
+          className={`w-full min-w-0 flex-1 px-6 pt-6 outline-none max-[860px]:px-4 max-[860px]:pt-[18px] ${isPdv ? "pb-[18px]" : "pb-10"}`}
         >
           <Outlet />
         </main>
       </div>
 
       {searching && <SearchPalette onClose={() => setSearching(false)} />}
+
+      {/* No celular a gaveta fica aberta por baixo: é nela que o foco volta quando o painel fecha. */}
+      {ajustando && <PainelAcessibilidade onClose={() => setAjustando(false)} />}
 
       {tour.ativo && (
         <TourGuiado

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
@@ -35,22 +35,59 @@ function MeusDados({ account }: { account: ClientDashboard }) {
   );
 }
 
+type Rascunho = { numeracao: string; nascimento: string; aceita: boolean };
+
+// Feito com IA: o que foi preenchido e ainda não salvo fica no sessionStorage (por cliente), porque sair da aba
+// desmonta o formulário: sem isso, abrir "Como usamos seus dados" (/privacidade) e voltar apagava o que a
+// pessoa tinha digitado. sessionStorage e não localStorage: o rascunho acaba junto com a aba. Pode falhar
+// (aba anônima, bloqueio); aí o formulário segue só na memória, como antes.
+const chaveDoRascunho = (clienteId: number) => `fatec:rascunho-perfil:${clienteId}`;
+
+function lerRascunho(clienteId: number): Rascunho | null {
+  try {
+    const salvo = JSON.parse(sessionStorage.getItem(chaveDoRascunho(clienteId)) ?? "null");
+    if (salvo && typeof salvo.numeracao === "string" && typeof salvo.nascimento === "string" && typeof salvo.aceita === "boolean") {
+      return salvo;
+    }
+  } catch {
+    // rascunho ilegível ou sem sessionStorage: começa do que está salvo na conta
+  }
+  return null;
+}
+
+function gravarRascunho(clienteId: number, rascunho: Rascunho | null) {
+  try {
+    if (rascunho) sessionStorage.setItem(chaveDoRascunho(clienteId), JSON.stringify(rascunho));
+    else sessionStorage.removeItem(chaveDoRascunho(clienteId));
+  } catch {
+    // sem sessionStorage: o rascunho fica só na memória
+  }
+}
+
 // Feito com IA: formulário da numeração, do aniversário e da autorização de contato (LGPD: a autorização é
 // um checkbox desmarcado por padrão, com a data em que foi dada). Salvar recarrega a conta, e as
 // notificações e o aviso de "complete seu perfil" se atualizam sozinhos.
 function Preferencias({ account }: { account: ClientDashboard }) {
   const { reload } = useConta();
   const notify = useToast();
-  const [numeracao, setNumeracao] = useState(account.shoeSize?.toString() ?? "");
-  const [nascimento, setNascimento] = useState(account.birthDate ?? "");
-  const [aceita, setAceita] = useState(account.contactConsentAt !== null);
+  const salvo: Rascunho = {
+    numeracao: account.shoeSize?.toString() ?? "",
+    nascimento: account.birthDate ?? "",
+    aceita: account.contactConsentAt !== null,
+  };
+  const [rascunho] = useState(() => lerRascunho(account.id));
+  const [numeracao, setNumeracao] = useState(rascunho?.numeracao ?? salvo.numeracao);
+  const [nascimento, setNascimento] = useState(rascunho?.nascimento ?? salvo.nascimento);
+  const [aceita, setAceita] = useState(rascunho?.aceita ?? salvo.aceita);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
-  const mudou =
-    numeracao !== (account.shoeSize?.toString() ?? "") ||
-    nascimento !== (account.birthDate ?? "") ||
-    aceita !== (account.contactConsentAt !== null);
+  const mudou = numeracao !== salvo.numeracao || nascimento !== salvo.nascimento || aceita !== salvo.aceita;
+
+  // Guarda enquanto houver diferença do que está salvo; depois de salvar (ou desfazer à mão), apaga.
+  useEffect(() => {
+    gravarRascunho(account.id, mudou ? { numeracao, nascimento, aceita } : null);
+  }, [account.id, mudou, numeracao, nascimento, aceita]);
 
   async function salvar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

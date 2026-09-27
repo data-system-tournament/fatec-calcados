@@ -52,7 +52,8 @@ PRODUTOS = [
 # atribuição obrigatória; conferido pelo link de download, que só leva a images.unsplash.com nas fotos livres e
 # manda as pagas do Unsplash+ para plus.unsplash.com). Os tênis usam as mesmas fotos da landing
 # (frontend/src/pages/inicio/fotos.ts). Cada uma foi escolhida pelo que o nome do produto diz, evitando marca à
-# mostra. A Palmilha Gel fica sem foto (não há foto livre de palmilha) e a loja mostra o ícone da categoria.
+# mostra. A Palmilha Gel não tem foto livre no Unsplash: a dela é do Pixabay (licença Pixabay, também de uso livre
+# e sem atribuição), por isso vai com o endereço inteiro.
 # O comentário traz o endereço da página da foto (unsplash.com/photos/<código>), para achar a original.
 FOTOS = {
     "7890001": "1606107557195-0e29a4b5b4aa",  # Tênis Runner: treino verde-limão
@@ -70,11 +71,17 @@ FOTOS = {
     "7890013": "1620288091141-71640b6cd6f4",  # Chinelo Slide: azul e branco na grama (yQY7fyckKk8)
     "7890014": "1605408499391-6368c628ef42",  # Tênis Corrida Pro: treino preto
     "7890015": "1615486364462-ef6363adbc18",  # Meia Esportiva (kit): três meias coloridas (YHmZBuNCLvQ)
+    # Palmilha Gel: par de palmilhas de calcanhar, uma mostrando o lado de gel
+    # (pixabay.com/photos/insoles-shoes-black-shoe-insoles-1194948/)
+    "7890016": "https://cdn.pixabay.com/photo/2016/02/11/23/04/deposits-1194948_640.jpg",
 }
 
 
 def _url_da_foto(sku):
-    return f"https://images.unsplash.com/photo-{FOTOS[sku]}?w=600&q=80&fm=jpg&fit=max" if sku in FOTOS else ""
+    foto = FOTOS.get(sku, "")
+    if not foto or foto.startswith("https://"):
+        return foto
+    return f"https://images.unsplash.com/photo-{foto}?w=600&q=80&fm=jpg&fit=max"
 
 
 # Feito com IA: grade de numerações de cada calçado (os acessórios, meia e palmilha, ficam de fora e têm um

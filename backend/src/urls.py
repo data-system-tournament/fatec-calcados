@@ -28,4 +28,6 @@ urlpatterns = [
     path("api/conta/compras/", views.api_conta_compras, name="api_conta_compras"),
     path("api/conta/compras/<uuid:compra_id>/", views.api_conta_compra_detalhe, name="api_conta_compra_detalhe"),
     path("api/conta/avaliacoes/", views.api_conta_avaliacoes, name="api_conta_avaliacoes"),
+    path("api/openapi.json", views.api_openapi, name="api_openapi"),
+    path("api/docs/", views.api_docs, name="api_docs"),
 ]

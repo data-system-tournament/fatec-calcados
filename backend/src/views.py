@@ -1,9 +1,10 @@
 import json
 from functools import wraps
 from datetime import date
+from pathlib import Path
 
 from django.contrib.auth import logout, update_session_auth_hash
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -478,3 +479,55 @@ def api_equipe_entrar(request):
 def api_equipe_sair(request):
     logout(request)
     return JsonResponse({})
+
+
+# ---------- Documentação da API (Swagger) ----------
+# A especificação OpenAPI é escrita à mão em src/openapi.json (as views são funções Django simples, sem DRF,
+# então não há de onde gerá-la sozinha); tests/test_openapi.py confere que ela cobre todas as rotas de urls.py.
+
+ARQUIVO_OPENAPI = Path(__file__).with_name("openapi.json")
+
+
+@require_GET
+def api_openapi(request):
+    return JsonResponse(json.loads(ARQUIVO_OPENAPI.read_text(encoding="utf-8")), json_dumps_params={"ensure_ascii": False})
+
+
+# Feito com IA: Swagger UI carregado do CDN, apontando para /api/openapi.json. O requestInterceptor copia o cookie
+# csrftoken para o cabeçalho X-CSRFToken, senão todo POST do "Try it out" levaria 403 do CSRF do Django.
+PAGINA_SWAGGER = """<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FATECalçados · API</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    function csrf() {
+      const par = document.cookie.split("; ").find((c) => c.startsWith("csrftoken="));
+      return par ? decodeURIComponent(par.split("=")[1]) : "";
+    }
+    SwaggerUIBundle({
+      url: "/api/openapi.json",
+      dom_id: "#swagger-ui",
+      withCredentials: true,
+      docExpansion: "list",
+      requestInterceptor: (req) => {
+        if (req.method && req.method.toUpperCase() !== "GET") req.headers["X-CSRFToken"] = csrf();
+        return req;
+      },
+    });
+  </script>
+</body>
+</html>
+"""
+
+
+@ensure_csrf_cookie
+@require_GET
+def api_docs(request):
+    return HttpResponse(PAGINA_SWAGGER)

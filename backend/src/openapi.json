@@ -1,0 +1,2749 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FATECalçados · API do programa de fidelidade",
+    "version": "1.0.0",
+    "description": "API JSON do backend Django (Desafio de Inovação Data System 2026).\n\n**Autenticação.** Não há token: tudo usa o cookie de sessão do Django (`sessionid`).\n- **Equipe da loja**: `POST /api/equipe/entrar/` com um usuário criado por `manage.py criar_admin`. As rotas de gestão e do PDV respondem 401 sem ele.\n- **Cliente**: `POST /api/conta/entrar/` com CPF e senha (ou `/api/conta/cadastro/`).\n- Cliente e equipe dividem a mesma sessão: entrar como um encerra o outro no mesmo navegador.\n\n**CSRF.** Todo `POST` exige o cabeçalho `X-CSRFToken` com o valor do cookie `csrftoken`, que é enviado por `GET /api/equipe/` e `GET /api/conta/` (mesmo respondendo 401). No Swagger (`/api/docs/`) o cabeçalho é preenchido sozinho a partir do cookie.\n\n**Erros.** Regras de negócio violadas respondem 400 com `{\"erro\": \"mensagem\"}`; sem sessão, 401 no mesmo formato; recurso inexistente, 404.\n\n**Valores.** Dinheiro em reais como número (`149.9`), datas em ISO 8601, CPFs de clientes sempre mascarados nas listas e perfis."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Mesmo servidor desta página (backend :8000 ou proxy do Vite :5173)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Catálogo",
+      "description": "Produtos. Aberto (sem login): o PDV e a loja online usam o mesmo catálogo."
+    },
+    {
+      "name": "Equipe",
+      "description": "Login da equipe da loja (área /admin)."
+    },
+    {
+      "name": "PDV",
+      "description": "Caixa: consulta de cliente pelo CPF, cadastro rápido e registro de vendas. Exige equipe."
+    },
+    {
+      "name": "Gestão",
+      "description": "Dashboard, ações, listas de clientes e vendas, avaliações e estoque. Exige equipe."
+    },
+    {
+      "name": "Conta do cliente",
+      "description": "Área do cliente (/login, /loja, /minha-conta). Exige a sessão do cliente, exceto cadastro e login."
+    }
+  ],
+  "paths": {
+    "/api/produtos/": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Catálogo de produtos",
+        "description": "Produtos ativos com estoque, grade de numerações e nota média das avaliações.",
+        "operationId": "listarProdutos",
+        "parameters": [
+          {
+            "name": "busca",
+            "in": "query",
+            "description": "Parte do nome ou início do SKU.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de produtos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "produtos": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Produto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/produtos/{sku}/": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Página do produto",
+        "description": "Produto do catálogo mais descrição, distribuição das notas e as 20 avaliações mais recentes (só o primeiro nome de quem avaliou).",
+        "operationId": "detalharProduto",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Sku"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Produto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProdutoDetalhe"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NaoEncontrado"
+          }
+        }
+      }
+    },
+    "/api/equipe/": {
+      "get": {
+        "tags": [
+          "Equipe"
+        ],
+        "summary": "Usuário da equipe logado",
+        "description": "Também envia o cookie `csrftoken` usado nos POST da loja.",
+        "operationId": "equipeLogada",
+        "responses": {
+          "200": {
+            "description": "Usuário logado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioEquipe"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/equipe/entrar/": {
+      "post": {
+        "tags": [
+          "Equipe"
+        ],
+        "summary": "Entrar como equipe",
+        "description": "Recusa usuários que não são da equipe (`is_staff`).",
+        "operationId": "entrarEquipe",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "usuario",
+                  "senha"
+                ],
+                "properties": {
+                  "usuario": {
+                    "type": "string",
+                    "example": "gerente"
+                  },
+                  "senha": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sessão aberta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioEquipe"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/RegraViolada"
+          }
+        }
+      }
+    },
+    "/api/equipe/sair/": {
+      "post": {
+        "tags": [
+          "Equipe"
+        ],
+        "summary": "Sair (equipe)",
+        "operationId": "sairEquipe",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Vazio"
+          }
+        }
+      }
+    },
+    "/api/clientes/{cpf}/": {
+      "get": {
+        "tags": [
+          "PDV"
+        ],
+        "summary": "Cliente pelo CPF (caixa)",
+        "description": "Usado pelo PDV ao digitar o CPF. Expira os lotes vencidos antes de calcular o saldo. O CPF volta sem máscara (foi o caixa que digitou).",
+        "operationId": "clientePorCpf",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cpf",
+            "in": "path",
+            "required": true,
+            "description": "CPF com ou sem pontuação.",
+            "schema": {
+              "type": "string",
+              "example": "39053344705"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cliente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteCaixa"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          },
+          "404": {
+            "$ref": "#/components/responses/NaoEncontrado"
+          }
+        }
+      }
+    },
+    "/api/clientes/": {
+      "get": {
+        "tags": [
+          "Gestão"
+        ],
+        "summary": "Lista de clientes",
+        "description": "Paginada. Ordenada pelo saldo (maior primeiro), ou pelo nome com `ordem=nome`. Contas excluídas não aparecem.",
+        "operationId": "listarClientes",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "busca",
+            "in": "query",
+            "description": "Parte do nome ou dígitos do CPF.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nivel",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/Nivel"
+            }
+          },
+          {
+            "name": "ordem",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "saldo",
+                "nome"
+              ],
+              "default": "saldo"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Pagina"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de clientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Paginacao"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "clientes": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ClienteNaLista"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "PDV"
+        ],
+        "summary": "Cadastrar cliente no caixa",
+        "description": "Cadastro rápido no programa (sem senha). A loja de cadastro vem do caixa informado.",
+        "operationId": "cadastrarCliente",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "cpf",
+                  "nome"
+                ],
+                "properties": {
+                  "cpf": {
+                    "type": "string",
+                    "example": "390.533.447-05"
+                  },
+                  "nome": {
+                    "type": "string",
+                    "example": "João Lima"
+                  },
+                  "caixa": {
+                    "type": "string",
+                    "description": "Código do caixa.",
+                    "example": "araras-01"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cliente criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteCaixa"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/RegraViolada"
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/clientes/{cliente_id}/perfil/": {
+      "get": {
+        "tags": [
+          "Gestão"
+        ],
+        "summary": "Perfil do cliente",
+        "description": "Nível, saldo, lotes válidos, últimas compras e os 30 últimos movimentos de pontos. Só leitura: não expira lotes.",
+        "operationId": "perfilDoCliente",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "cliente_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerfilCliente"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          },
+          "404": {
+            "$ref": "#/components/responses/NaoEncontrado"
+          }
+        }
+      }
+    },
+    "/api/vendas/": {
+      "get": {
+        "tags": [
+          "Gestão"
+        ],
+        "summary": "Lista de vendas",
+        "description": "Paginada, mais recentes primeiro. Traz os totais do filtro e as opções dos filtros.",
+        "operationId": "listarVendas",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "inicio",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "fim",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "caixa",
+            "in": "query",
+            "description": "Código do caixa.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagamento",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/FormaPagamento"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Pagina"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de vendas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Paginacao"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "faturamento": {
+                          "type": "number"
+                        },
+                        "desconto": {
+                          "type": "number"
+                        },
+                        "filtros": {
+                          "type": "object",
+                          "properties": {
+                            "caixas": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/Opcao"
+                              }
+                            },
+                            "formas_pagamento": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/Opcao"
+                              }
+                            }
+                          }
+                        },
+                        "vendas": {
+                          "type": "array",
+                          "items": {
+                            "allOf": [
+                              {
+                                "$ref": "#/components/schemas/VendaResumo"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "itens_qtd": {
+                                    "type": "integer"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "PDV"
+        ],
+        "summary": "Registrar venda",
+        "description": "Idempotente pelo `id` (UUID gerado no caixa): reenviar a mesma venda responde 200 com a venda já gravada. Os preços vêm sempre do banco. O caixa nunca recusa venda por falta de estoque (baixa até zero). `data` só é enviada por vendas feitas offline; datas no futuro são recusadas (5 min de folga).",
+        "operationId": "registrarVenda",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "caixa",
+                  "itens",
+                  "forma_pagamento"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "caixa": {
+                    "type": "string",
+                    "example": "araras-01"
+                  },
+                  "itens": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ItemPedido"
+                    }
+                  },
+                  "forma_pagamento": {
+                    "$ref": "#/components/schemas/FormaPagamento"
+                  },
+                  "cpf": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Cliente do programa (opcional)."
+                  },
+                  "pontos_resgate": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Múltiplo de 100 (100 pontos = R$ 5,00)."
+                  },
+                  "data": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Venda já existia (reenvio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendaRegistrada"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Venda gravada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendaRegistrada"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/RegraViolada"
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/vendas/{compra_id}/": {
+      "get": {
+        "tags": [
+          "Gestão"
+        ],
+        "summary": "Detalhe da venda",
+        "operationId": "detalharVenda",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompraId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Venda com itens",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendaDetalhe"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          },
+          "404": {
+            "$ref": "#/components/responses/NaoEncontrado"
+          }
+        }
+      }
+    },
+    "/api/dashboard/": {
+      "get": {
+        "tags": [
+          "Gestão"
+        ],
+        "summary": "Indicadores do dashboard",
+        "description": "Pontos, custo, vendas, base de clientes, ranking e evolução mensal no período. Sem `inicio`/`fim` válidos usa o período padrão.",
+        "operationId": "dashboard",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "inicio",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "fim",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Indicadores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/acoes/": {
+      "get": {
+        "tags": [
+          "Gestão"
+        ],
+        "summary": "Ações do dia",
+        "description": "Listas de clientes para o gerente contatar (sumindo, pontos vencendo, perto de subir de nível…), cada uma com uma mensagem pronta.",
+        "operationId": "acoesDoDia",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ações",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "acoes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Acao"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/avaliacoes/": {
+      "get": {
+        "tags": [
+          "Gestão"
+        ],
+        "summary": "Avaliações da loja",
+        "description": "Resumo, distribuição e média por produto cobrem todas as avaliações; os filtros `produto`/`nota` só estreitam a lista paginada de comentários.",
+        "operationId": "avaliacoesDaLoja",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "produto",
+            "in": "query",
+            "description": "SKU.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nota",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Pagina"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avaliações",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvaliacoesDaLoja"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/estoque/": {
+      "get": {
+        "tags": [
+          "Gestão"
+        ],
+        "summary": "Estoque da loja",
+        "description": "Esgotados e acabando primeiro. Calçados trazem o estoque por numeração; acessórios, um número só.",
+        "operationId": "estoqueDaLoja",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "situacao",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SituacaoEstoque"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estoque",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "resumo": {
+                      "type": "object",
+                      "properties": {
+                        "produtos": {
+                          "type": "integer"
+                        },
+                        "unidades": {
+                          "type": "integer"
+                        },
+                        "esgotados": {
+                          "type": "integer"
+                        },
+                        "acabando": {
+                          "type": "integer"
+                        },
+                        "numeracoes_esgotadas": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "dias_de_giro": {
+                      "type": "integer",
+                      "description": "Janela de `vendidos` (30 dias)."
+                    },
+                    "produtos": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ItemEstoque"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/estoque/{sku}/": {
+      "post": {
+        "tags": [
+          "Gestão"
+        ],
+        "summary": "Ajustar estoque",
+        "description": "Grava a contagem de uma numeração (calçado) ou do acessório. Numeração nova abre um tamanho na grade. Responde com a linha do produto como a lista mostra.",
+        "operationId": "ajustarEstoque",
+        "security": [
+          {
+            "sessaoEquipe": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Sku"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "quantidade",
+                  "minimo"
+                ],
+                "properties": {
+                  "quantidade": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "minimo": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "numeracao": {
+                    "type": "integer",
+                    "description": "Obrigatória para calçado, proibida para acessório."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Linha atualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemEstoque"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/RegraViolada"
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/conta/": {
+      "get": {
+        "tags": [
+          "Conta do cliente"
+        ],
+        "summary": "Painel do cliente logado",
+        "description": "Perfil, pontos, compras e dados para notificações. Também envia o cookie `csrftoken`.",
+        "operationId": "painelDoCliente",
+        "security": [
+          {
+            "sessaoCliente": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Painel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PainelCliente"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/conta/cadastro/": {
+      "post": {
+        "tags": [
+          "Conta do cliente"
+        ],
+        "summary": "Criar acesso",
+        "description": "Cria o cliente (loja \"Loja Online\") ou vincula um CPF já cadastrado no caixa se o primeiro nome bater. Já entra na conta.",
+        "operationId": "cadastrarConta",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "cpf",
+                  "nome",
+                  "senha"
+                ],
+                "properties": {
+                  "cpf": {
+                    "type": "string",
+                    "example": "390.533.447-05"
+                  },
+                  "nome": {
+                    "type": "string",
+                    "example": "João Lima"
+                  },
+                  "senha": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Conta criada e sessão aberta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PainelCliente"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/RegraViolada"
+          }
+        }
+      }
+    },
+    "/api/conta/entrar/": {
+      "post": {
+        "tags": [
+          "Conta do cliente"
+        ],
+        "summary": "Entrar (cliente)",
+        "operationId": "entrarConta",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "cpf",
+                  "senha"
+                ],
+                "properties": {
+                  "cpf": {
+                    "type": "string"
+                  },
+                  "senha": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sessão aberta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PainelCliente"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/RegraViolada"
+          }
+        }
+      }
+    },
+    "/api/conta/sair/": {
+      "post": {
+        "tags": [
+          "Conta do cliente"
+        ],
+        "summary": "Sair (cliente)",
+        "operationId": "sairConta",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Vazio"
+          }
+        }
+      }
+    },
+    "/api/conta/senha/": {
+      "post": {
+        "tags": [
+          "Conta do cliente"
+        ],
+        "summary": "Alterar senha",
+        "description": "Exige a senha atual e mantém a sessão aberta.",
+        "operationId": "alterarSenha",
+        "security": [
+          {
+            "sessaoCliente": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "senha_atual",
+                  "nova_senha"
+                ],
+                "properties": {
+                  "senha_atual": {
+                    "type": "string",
+                    "format": "password"
+                  },
+                  "nova_senha": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Vazio"
+          },
+          "400": {
+            "$ref": "#/components/responses/RegraViolada"
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/conta/excluir/": {
+      "post": {
+        "tags": [
+          "Conta do cliente"
+        ],
+        "summary": "Excluir conta (LGPD)",
+        "description": "Anonimiza em vez de apagar: cancela os pontos restantes, troca nome e CPF, apaga o login e encerra a sessão. Vendas e avaliações ficam, sem vínculo com a pessoa.",
+        "operationId": "excluirConta",
+        "security": [
+          {
+            "sessaoCliente": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "senha"
+                ],
+                "properties": {
+                  "senha": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Vazio"
+          },
+          "400": {
+            "$ref": "#/components/responses/RegraViolada"
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/conta/perfil/": {
+      "post": {
+        "tags": [
+          "Conta do cliente"
+        ],
+        "summary": "Atualizar perfil",
+        "description": "Numeração (16–48), nascimento e consentimento de contato. `null` ou `\"\"` apaga o valor. Marcar o consentimento de novo mantém a data original; desmarcar apaga.",
+        "operationId": "atualizarPerfil",
+        "security": [
+          {
+            "sessaoCliente": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "numeracao": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 16,
+                    "maximum": 48
+                  },
+                  "nascimento": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date"
+                  },
+                  "aceita_contato": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Painel atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PainelCliente"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/RegraViolada"
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    },
+    "/api/conta/compras/": {
+      "post": {
+        "tags": [
+          "Conta do cliente"
+        ],
+        "summary": "Comprar na loja online",
+        "description": "Mesmas regras da venda do caixa (`online-01`), mas o CPF vem da sessão e a loja online recusa pedido sem estoque. Idempotente pelo `id`.",
+        "operationId": "comprarOnline",
+        "security": [
+          {
+            "sessaoCliente": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "itens",
+                  "forma_pagamento"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "itens": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ItemPedido"
+                    }
+                  },
+                  "forma_pagamento": {
+                    "$ref": "#/components/schemas/FormaPagamento"
+                  },
+                  "pontos_resgate": {
+                    "type": "integer",
+                    "default": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Compra já existia (reenvio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendaRegistrada"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Compra gravada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendaRegistrada"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/RegraViolada"
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          },
+          "404": {
+            "$ref": "#/components/responses/NaoEncontrado"
+          }
+        }
+      }
+    },
+    "/api/conta/compras/{compra_id}/": {
+      "get": {
+        "tags": [
+          "Conta do cliente"
+        ],
+        "summary": "Detalhe de uma compra minha",
+        "operationId": "detalharMinhaCompra",
+        "security": [
+          {
+            "sessaoCliente": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CompraId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compra com itens",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendaDetalhe"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          },
+          "404": {
+            "$ref": "#/components/responses/NaoEncontrado"
+          }
+        }
+      }
+    },
+    "/api/conta/avaliacoes/": {
+      "get": {
+        "tags": [
+          "Conta do cliente"
+        ],
+        "summary": "Minhas avaliações",
+        "description": "Produtos comprados ainda sem avaliação e as avaliações já feitas, com as regras (pontos por avaliação, tamanho mínimo do comentário).",
+        "operationId": "minhasAvaliacoes",
+        "security": [
+          {
+            "sessaoCliente": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avaliações",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvaliacoesDoCliente"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Conta do cliente"
+        ],
+        "summary": "Avaliar produto",
+        "description": "Uma avaliação por produto comprado; rende 20 pontos (lote comum, validade de 12 meses). Nota 1–5 e comentário com pelo menos 20 caracteres.",
+        "operationId": "avaliarProduto",
+        "security": [
+          {
+            "sessaoCliente": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sku",
+                  "nota",
+                  "comentario"
+                ],
+                "properties": {
+                  "sku": {
+                    "type": "string"
+                  },
+                  "nota": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "comentario": {
+                    "type": "string",
+                    "minLength": 20
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lista atualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvaliacoesDoCliente"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/RegraViolada"
+          },
+          "401": {
+            "$ref": "#/components/responses/SemSessao"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessaoEquipe": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid",
+        "description": "Sessão aberta por POST /api/equipe/entrar/ (usuário is_staff)."
+      },
+      "sessaoCliente": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid",
+        "description": "Sessão aberta por POST /api/conta/entrar/ ou /api/conta/cadastro/."
+      }
+    },
+    "parameters": {
+      "Sku": {
+        "name": "sku",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CompraId": {
+        "name": "compra_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "Pagina": {
+        "name": "pagina",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      }
+    },
+    "responses": {
+      "RegraViolada": {
+        "description": "Regra de negócio violada ou dados inválidos",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Erro"
+            }
+          }
+        }
+      },
+      "SemSessao": {
+        "description": "Sem sessão (equipe ou cliente, conforme a rota)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Erro"
+            }
+          }
+        }
+      },
+      "NaoEncontrado": {
+        "description": "Não encontrado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Erro"
+            }
+          }
+        }
+      },
+      "Vazio": {
+        "description": "OK",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Erro": {
+        "type": "object",
+        "properties": {
+          "erro": {
+            "type": "string",
+            "example": "CPF não cadastrado no programa."
+          }
+        }
+      },
+      "Nivel": {
+        "type": "string",
+        "enum": [
+          "BRONZE",
+          "PRATA",
+          "OURO"
+        ]
+      },
+      "FormaPagamento": {
+        "type": "string",
+        "enum": [
+          "PIX",
+          "CREDITO",
+          "DEBITO",
+          "DINHEIRO"
+        ]
+      },
+      "SituacaoEstoque": {
+        "type": "string",
+        "enum": [
+          "ESGOTADO",
+          "ACABANDO",
+          "OK"
+        ]
+      },
+      "TipoMovimento": {
+        "type": "string",
+        "enum": [
+          "ACUMULO",
+          "RESGATE",
+          "EXPIRACAO"
+        ]
+      },
+      "Paginacao": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "paginas": {
+            "type": "integer"
+          }
+        }
+      },
+      "Opcao": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          }
+        }
+      },
+      "EstoqueNumeracao": {
+        "type": "object",
+        "properties": {
+          "numeracao": {
+            "type": "integer",
+            "example": 40
+          },
+          "quantidade": {
+            "type": "integer"
+          },
+          "situacao": {
+            "$ref": "#/components/schemas/SituacaoEstoque"
+          }
+        }
+      },
+      "Produto": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "preco": {
+            "type": "number",
+            "example": 299.9
+          },
+          "foto": {
+            "type": "string",
+            "description": "URL da foto (pode ser vazia)."
+          },
+          "usa_numeracao": {
+            "type": "boolean",
+            "description": "true = calçado (estoque por numeração)."
+          },
+          "estoque": {
+            "type": "integer",
+            "description": "No calçado, a soma da grade."
+          },
+          "situacao": {
+            "$ref": "#/components/schemas/SituacaoEstoque"
+          },
+          "numeracoes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstoqueNumeracao"
+            }
+          },
+          "nota_media": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "avaliacoes": {
+            "type": "integer"
+          }
+        }
+      },
+      "ProdutoDetalhe": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Produto"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "descricao": {
+                "type": "string"
+              },
+              "por_nota": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "nota": {
+                      "type": "integer"
+                    },
+                    "quantidade": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              },
+              "comentarios": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "nome": {
+                      "type": "string",
+                      "description": "Primeiro nome, ou \"Cliente excluído\"."
+                    },
+                    "nota": {
+                      "type": "integer"
+                    },
+                    "comentario": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ItemPedido": {
+        "type": "object",
+        "required": [
+          "sku",
+          "quantidade"
+        ],
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "numeracao": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Obrigatória para calçado (e deve existir na grade), null para acessório."
+          }
+        }
+      },
+      "UsuarioEquipe": {
+        "type": "object",
+        "properties": {
+          "usuario": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          }
+        }
+      },
+      "ClienteCaixa": {
+        "type": "object",
+        "properties": {
+          "cpf": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "nivel": {
+            "$ref": "#/components/schemas/Nivel"
+          },
+          "nivel_nome": {
+            "type": "string"
+          },
+          "bonus_percentual": {
+            "type": "integer"
+          },
+          "saldo_pontos": {
+            "type": "integer"
+          },
+          "pontos_resgataveis": {
+            "type": "integer",
+            "description": "Saldo arredondado para baixo em blocos de 100."
+          },
+          "valor_resgatavel": {
+            "type": "number"
+          }
+        }
+      },
+      "ClienteNaLista": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cpf": {
+            "type": "string",
+            "description": "Mascarado."
+          },
+          "nivel": {
+            "$ref": "#/components/schemas/Nivel"
+          },
+          "nivel_nome": {
+            "type": "string"
+          },
+          "saldo_pontos": {
+            "type": "integer"
+          },
+          "compras": {
+            "type": "integer"
+          },
+          "ultima_compra": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "PerfilCliente": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cpf": {
+            "type": "string",
+            "description": "Mascarado."
+          },
+          "cadastrado_em": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "loja_cadastro": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "numeracao": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "nascimento": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "contato_autorizado_em": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "nivel": {
+            "$ref": "#/components/schemas/Nivel"
+          },
+          "nivel_nome": {
+            "type": "string"
+          },
+          "bonus_percentual": {
+            "type": "integer"
+          },
+          "pontos_12m": {
+            "type": "integer",
+            "description": "Acumulado nos últimos 12 meses (define o nível)."
+          },
+          "proximo_nivel": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "nome": {
+                "type": "string"
+              },
+              "faltam": {
+                "type": "integer"
+              }
+            }
+          },
+          "saldo_pontos": {
+            "type": "integer"
+          },
+          "pontos_resgataveis": {
+            "type": "integer"
+          },
+          "valor_resgatavel": {
+            "type": "number"
+          },
+          "total_compras": {
+            "type": "integer"
+          },
+          "total_gasto": {
+            "type": "number"
+          },
+          "total_pontos_ganhos": {
+            "type": "integer"
+          },
+          "total_pontos_resgatados": {
+            "type": "integer"
+          },
+          "lotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pontos": {
+                  "type": "integer"
+                },
+                "expira_em": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "compras": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "data": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "caixa": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "forma_pagamento": {
+                  "$ref": "#/components/schemas/FormaPagamento"
+                },
+                "valor_pago": {
+                  "type": "number"
+                },
+                "desconto": {
+                  "type": "number"
+                },
+                "pontos_ganhos": {
+                  "type": "integer"
+                },
+                "pontos_resgatados": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "movimentos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "tipo": {
+                  "$ref": "#/components/schemas/TipoMovimento"
+                },
+                "pontos": {
+                  "type": "integer"
+                },
+                "avaliacao": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Nome do produto, quando os pontos vieram de uma avaliação."
+                }
+              }
+            }
+          }
+        }
+      },
+      "PainelCliente": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PerfilCliente"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "avaliacoes_pendentes": {
+                "type": "object",
+                "properties": {
+                  "quantidade": {
+                    "type": "integer"
+                  },
+                  "pontos": {
+                    "type": "integer"
+                  },
+                  "ultima_compra": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                }
+              },
+              "progresso_nivel": {
+                "type": "number",
+                "description": "Percentual até o próximo nível."
+              },
+              "a_vencer": {
+                "type": "object",
+                "properties": {
+                  "dias": {
+                    "type": "integer"
+                  },
+                  "pontos": {
+                    "type": "integer"
+                  },
+                  "proxima_data": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                }
+              },
+              "economia": {
+                "type": "number",
+                "description": "Reais já economizados com resgates."
+              },
+              "mais_comprados": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sku": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "preco": {
+                      "type": "number"
+                    },
+                    "foto": {
+                      "type": "string"
+                    },
+                    "unidades": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "VendaRegistrada": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valor_bruto": {
+            "type": "number"
+          },
+          "desconto": {
+            "type": "number"
+          },
+          "valor_pago": {
+            "type": "number"
+          },
+          "pontos_resgatados": {
+            "type": "integer"
+          },
+          "pontos_ganhos": {
+            "type": "integer"
+          },
+          "nivel_na_compra": {
+            "type": "string",
+            "description": "Nível antes da compra (usado no bônus); vazio sem cliente."
+          },
+          "saldo_atual": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        }
+      },
+      "VendaResumo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cliente": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "nome": {
+                "type": "string"
+              }
+            }
+          },
+          "caixa": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "forma_pagamento": {
+            "$ref": "#/components/schemas/FormaPagamento"
+          },
+          "valor_bruto": {
+            "type": "number"
+          },
+          "desconto": {
+            "type": "number"
+          },
+          "valor_pago": {
+            "type": "number"
+          },
+          "pontos_ganhos": {
+            "type": "integer"
+          },
+          "pontos_resgatados": {
+            "type": "integer"
+          }
+        }
+      },
+      "VendaDetalhe": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/VendaResumo"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "loja": {
+                "type": "string"
+              },
+              "nivel_na_compra": {
+                "type": "string"
+              },
+              "nivel_na_compra_nome": {
+                "type": "string"
+              },
+              "itens": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sku": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "quantidade": {
+                      "type": "integer"
+                    },
+                    "numeracao": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "preco_unitario": {
+                      "type": "number"
+                    },
+                    "subtotal": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "GrupoDeVendas": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "integer"
+          },
+          "faturamento": {
+            "type": "number"
+          },
+          "percentual": {
+            "type": "number"
+          }
+        }
+      },
+      "Dashboard": {
+        "type": "object",
+        "properties": {
+          "inicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "fim": {
+            "type": "string",
+            "format": "date"
+          },
+          "atalhos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rotulo": {
+                  "type": "string"
+                },
+                "inicio": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "fim": {
+                  "type": "string",
+                  "format": "date"
+                }
+              }
+            }
+          },
+          "base": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "niveis": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "codigo": {
+                      "$ref": "#/components/schemas/Nivel"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "bonus": {
+                      "type": "integer"
+                    },
+                    "clientes": {
+                      "type": "integer"
+                    },
+                    "percentual": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "pontos": {
+            "type": "object",
+            "properties": {
+              "acumulados": {
+                "type": "integer"
+              },
+              "resgatados": {
+                "type": "integer"
+              },
+              "expirados": {
+                "type": "integer"
+              },
+              "taxa_resgate": {
+                "type": "number"
+              },
+              "custo": {
+                "type": "number"
+              },
+              "faturamento": {
+                "type": "number"
+              },
+              "custo_sobre_faturamento": {
+                "type": "number"
+              },
+              "compras": {
+                "type": "integer"
+              },
+              "compras_com_resgate": {
+                "type": "integer"
+              },
+              "em_aberto": {
+                "type": "integer"
+              },
+              "em_aberto_reais": {
+                "type": "number"
+              },
+              "a_vencer": {
+                "type": "object",
+                "properties": {
+                  "dias": {
+                    "type": "integer"
+                  },
+                  "pontos": {
+                    "type": "integer"
+                  },
+                  "reais": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          },
+          "vendas": {
+            "type": "object",
+            "properties": {
+              "quantidade": {
+                "type": "integer"
+              },
+              "faturamento": {
+                "type": "number"
+              },
+              "ticket_medio": {
+                "type": "number"
+              },
+              "com_cpf": {
+                "type": "integer"
+              },
+              "percentual_com_cpf": {
+                "type": "number"
+              },
+              "por_caixa": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/GrupoDeVendas"
+                }
+              },
+              "por_pagamento": {
+                "type": "array",
+                "items": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/GrupoDeVendas"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "codigo": {
+                          "$ref": "#/components/schemas/FormaPagamento"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              "mais_vendidos": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sku": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "unidades": {
+                      "type": "integer"
+                    },
+                    "receita": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "resgate_por_nivel": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "codigo": {
+                  "$ref": "#/components/schemas/Nivel"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "compras": {
+                  "type": "integer"
+                },
+                "compras_com_resgate": {
+                  "type": "integer"
+                },
+                "taxa_resgate": {
+                  "type": "number"
+                },
+                "pontos_resgatados": {
+                  "type": "integer"
+                },
+                "pontos_ganhos": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "ranking": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "posicao": {
+                  "type": "integer"
+                },
+                "id": {
+                  "type": "integer"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "cpf": {
+                  "type": "string",
+                  "description": "Mascarado."
+                },
+                "nivel": {
+                  "$ref": "#/components/schemas/Nivel"
+                },
+                "nivel_nome": {
+                  "type": "string"
+                },
+                "acumulado": {
+                  "type": "integer"
+                },
+                "saldo": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "evolucao": {
+            "type": "object",
+            "properties": {
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "acumulados": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              },
+              "resgatados": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              },
+              "expirados": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              },
+              "custo": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "Reais de desconto por mês."
+              },
+              "clientes": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                },
+                "description": "Clientes que resgataram no mês."
+              }
+            }
+          }
+        }
+      },
+      "Acao": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "example": "vencendo"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "mensagem": {
+            "type": "string",
+            "description": "Texto pronto para enviar ao cliente."
+          },
+          "clientes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nome": {
+                  "type": "string"
+                },
+                "cpf": {
+                  "type": "string"
+                },
+                "detalhe": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "AvaliacoesDaLoja": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Paginacao"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "resumo": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer"
+                  },
+                  "media": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "pontos": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "por_nota": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "nota": {
+                      "type": "integer"
+                    },
+                    "quantidade": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              },
+              "por_produto": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "sku": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "quantidade": {
+                      "type": "integer"
+                    },
+                    "media": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "avaliacoes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "cliente": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "nome": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "produto": {
+                      "type": "object",
+                      "properties": {
+                        "sku": {
+                          "type": "string"
+                        },
+                        "nome": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "nota": {
+                      "type": "integer"
+                    },
+                    "comentario": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "AvaliacoesDoCliente": {
+        "type": "object",
+        "properties": {
+          "pontos_por_avaliacao": {
+            "type": "integer",
+            "example": 20
+          },
+          "comentario_minimo": {
+            "type": "integer",
+            "example": 20
+          },
+          "para_avaliar": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sku": {
+                  "type": "string"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "preco": {
+                  "type": "number"
+                },
+                "foto": {
+                  "type": "string"
+                },
+                "ultima_compra": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "avaliadas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sku": {
+                  "type": "string"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "foto": {
+                  "type": "string"
+                },
+                "nota": {
+                  "type": "integer"
+                },
+                "comentario": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "pontos": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ItemEstoque": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "usa_numeracao": {
+            "type": "boolean"
+          },
+          "estoque": {
+            "type": "integer"
+          },
+          "minimo": {
+            "type": "integer",
+            "description": "No calçado, vale para cada numeração."
+          },
+          "situacao": {
+            "$ref": "#/components/schemas/SituacaoEstoque"
+          },
+          "vendidos": {
+            "type": "integer",
+            "description": "Unidades vendidas nos últimos 30 dias."
+          },
+          "numeracoes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstoqueNumeracao"
+            }
+          }
+        }
+      }
+    }
+  }
+}

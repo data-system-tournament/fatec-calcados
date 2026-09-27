@@ -111,7 +111,17 @@ npm run build    # confere os tipos (tsc) e gera o build
 npm test         # vitest
 ```
 
-## 5. Problemas comuns
+## 5. Documentação da API (Swagger e PDF)
+
+- Swagger interativo: http://localhost:8000/api/docs/ (ou http://localhost:5173/api/docs/, pelo proxy do Vite). A especificação crua fica em `/api/openapi.json`.
+- Para testar as rotas da loja no "Try it out", entre antes em `POST /api/equipe/entrar/`; as do cliente, em `POST /api/conta/entrar/`.
+- A especificação é escrita à mão em `backend/src/openapi.json`. Ao criar ou mudar uma rota, atualize esse arquivo (o teste `src.tests.test_openapi` falha se uma rota ou método ficar sem documentação) e gere o PDF de novo:
+
+```bash
+node docs/gerar-pdf-endpoints.mjs   # gera docs/endpoints-da-api.pdf (usa o Chrome ou o Edge instalado)
+```
+
+## 6. Problemas comuns
 
 | Sintoma | O que fazer |
 |---|---|

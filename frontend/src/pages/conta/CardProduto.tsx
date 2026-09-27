@@ -1,4 +1,4 @@
-import { ChevronRight, Coins, ShoppingCart } from "lucide-react";
+import { Coins, ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Estrelas } from "../../components/ui/Estrelas";
 import { estimatePoints } from "../../regras";
@@ -10,8 +10,9 @@ import { FotoDoProduto } from "./pecas";
 
 // Feito com IA: card de produto da loja online, no formato das vitrines de e-commerce: a foto em cima (sem
 // foto, o ícone da categoria) e, embaixo, categoria, nome, nota das avaliações reais, pontos que a compra
-// rende (com o bônus do nível, via estimatePoints) e preço. Foto e nome levam à página do produto. O botão
-// do acessório põe no carrinho; o do calçado abre a página, porque ali se escolhe a numeração. Com o número
+// rende (com o bônus do nível, via estimatePoints) e preço. Foto e nome levam à página do produto. Todo card tem
+// o mesmo botão de carrinho: no acessório ele já põe no carrinho; no calçado abre a página, porque ali se
+// escolhe a numeração. Com o número
 // do perfil preenchido, o card já diz se aquele número tem em estoque.
 function CardProduto({ product, quantidade, bonus, numeroDoCliente, onAdd }: {
   product: Product;
@@ -75,10 +76,10 @@ function CardProduto({ product, quantidade, bonus, numeroDoCliente, onAdd }: {
           {product.usesSizes ? (
             <Link
               to={pagina}
-              aria-label={`Escolher a numeração de ${product.name}`}
-              className="inline-flex h-9 flex-none items-center gap-0.5 rounded-md border border-line-2 pr-1.5 pl-2.5 text-[12.5px] font-medium text-ink-2 transition-colors duration-100 hover:border-ink hover:bg-ink hover:text-surface"
+              aria-label={`Escolher a numeração de ${product.name} para pôr no carrinho`}
+              className="grid size-9 flex-none place-items-center rounded-md border border-line-2 text-ink-2 transition-colors duration-100 hover:border-ink hover:bg-ink hover:text-surface"
             >
-              Nº <ChevronRight size={15} aria-hidden />
+              <ShoppingCart size={16} aria-hidden />
             </Link>
           ) : (
             <button

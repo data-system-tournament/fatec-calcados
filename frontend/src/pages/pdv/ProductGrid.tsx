@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import type { Product } from "../../types";
 import CardProduto from "../conta/CardProduto";
-import { formatMoney } from "../../utils/format";
+import { formatMoney, formatNumber } from "../../utils/format";
 import { CATEGORIAS, categoriaDoProduto, iconeDoProduto, type Categoria } from "./categorias";
 
 const chipBase = "rounded-full border px-3 py-1 text-[12.5px] font-medium transition-colors duration-100 ";
@@ -25,10 +25,13 @@ type ProductGridProps = {
   variante?: keyof typeof grades;
   // Bônus do nível do cliente, para o "+N pts" dos cards da loja.
   bonus?: number;
+  // Número do calçado do perfil do cliente (loja online), para o card dizer se ele tem em estoque.
+  numeroDoCliente?: number | null;
 };
 
-// Catálogo em grade: cada clique soma uma unidade do produto ao carrinho.
-function ProductGrid({ products, quantidades, onAdd, variante = "pdv", bonus = 0 }: ProductGridProps) {
+// Catálogo em grade. No PDV, o clique chama onAdd (o PDV pede a numeração do calçado antes de somar); na
+// loja online, o card leva à página do produto.
+function ProductGrid({ products, quantidades, onAdd, variante = "pdv", bonus = 0, numeroDoCliente = null }: ProductGridProps) {
   const [filtro, setFiltro] = useState<Categoria | null>(null);
   const visiveis = filtro ? products.filter((p) => categoriaDoProduto(p.name) === filtro) : products;
 
@@ -56,7 +59,7 @@ function ProductGrid({ products, quantidades, onAdd, variante = "pdv", bonus = 0
           if (variante === "loja") {
             return (
               <li key={product.sku}>
-                <CardProduto product={product} quantidade={qtd} bonus={bonus} onAdd={onAdd} />
+                <CardProduto product={product} quantidade={qtd} bonus={bonus} numeroDoCliente={numeroDoCliente} onAdd={onAdd} />
               </li>
             );
           }
@@ -87,6 +90,9 @@ function ProductGrid({ products, quantidades, onAdd, variante = "pdv", bonus = 0
                     <b className="text-[14px] font-semibold tabular-nums">{formatMoney(product.price)}</b>
                     <small className="text-[11px] text-muted tabular-nums">{product.sku}</small>
                   </span>
+                  <small className={`text-[11px] tabular-nums ${product.stock === 0 ? "font-medium text-danger" : "text-muted"}`}>
+                    {product.stock === 0 ? "Sem estoque" : `${formatNumber(product.stock)} em estoque`}
+                  </small>
                 </span>
               </button>
             </li>

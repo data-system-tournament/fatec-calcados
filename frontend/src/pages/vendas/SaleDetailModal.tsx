@@ -59,9 +59,13 @@ function Detail({ sale, doCliente }: { sale: SaleDetail; doCliente: boolean }) {
           </thead>
           <tbody>
             {sale.items.map((item) => (
-              <tr key={item.sku}>
+              <tr key={`${item.sku}#${item.size ?? ""}`}>
                 <td className={`${tdClass} whitespace-normal`}>
-                  {item.name}<small className="block text-xs text-muted">{formatMoney(item.unitPrice)} un.</small>
+                  {item.name}
+                  <small className="block text-xs text-muted">
+                    {item.size !== null && <>Nº {item.size} · </>}
+                    {formatMoney(item.unitPrice)} un.
+                  </small>
                 </td>
                 <td className={`${tdClass} text-right`}>{item.quantity}</td>
                 <td className={`${tdClass} text-right`}>{formatMoney(item.subtotal)}</td>

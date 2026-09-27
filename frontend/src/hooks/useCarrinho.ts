@@ -3,6 +3,7 @@ import { useCaixa } from "../contexts/caixa";
 import { useToast } from "../contexts/toast";
 import { estimatePoints, maxRedeemPoints, pointsToMoney } from "../regras";
 import type { Product, Sale } from "../types";
+import { chaveDoItem, mudarQuantidade, somarAoCarrinho, tirarDoCarrinho } from "../utils/carrinho";
 import { currentTime, roundMoney } from "../utils/format";
 
 // Carrinho da venda em andamento: itens, resgate de pontos e totais. O estado em si vive no
@@ -11,7 +12,8 @@ export function useCarrinho() {
   const { products, currentSale, updateSale } = useCaixa();
   const notify = useToast();
   const { cart, client, paymentMethod, pointsToRedeem } = currentSale;
-  const [selectedSku, setSelectedSku] = useState<string | null>(null);
+  // Item selecionado no carrinho, pela chave (sku + numeração: o mesmo tênis em dois números são dois itens).
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const items = cart.flatMap((item) => {
     const product = products.find((p) => p.sku === item.sku);
@@ -30,29 +32,20 @@ export function useCarrinho() {
   const total = roundMoney(subtotal - pointsDiscount);
   const points = client ? estimatePoints(total, client.bonusPercent) : 0;
 
-  function addProduct(product: Product) {
-    const alreadyInCart = cart.some((item) => item.sku === product.sku);
-    if (alreadyInCart) {
-      changeQuantity(product.sku, 1);
-    } else {
-      updateSale({ cart: [...cart, { sku: product.sku, quantity: 1 }] });
-    }
-    setSelectedSku(product.sku);
+  // `size`: a numeração do calçado (escolhida no SeletorNumeracao); null no acessório.
+  function addProduct(product: Product, size: number | null) {
+    updateSale({ cart: somarAoCarrinho(cart, product.sku, size) });
+    setSelectedKey(chaveDoItem({ sku: product.sku, size }));
   }
 
-  function changeQuantity(sku: string, change: number) {
-    updateSale({
-      cart: cart.map((item) => {
-        if (item.sku !== sku) return item;
-        return { ...item, quantity: Math.max(1, item.quantity + change) };
-      }),
-    });
+  function changeQuantity(key: string, change: number) {
+    updateSale({ cart: mudarQuantidade(cart, key, change) });
   }
 
-  function removeItem(sku: string) {
-    const product = products.find((p) => p.sku === sku);
-    updateSale({ cart: cart.filter((item) => item.sku !== sku) });
-    if (product) notify(`Item removido: ${product.name}`);
+  function removeItem(key: string) {
+    const item = items.find((i) => chaveDoItem(i) === key);
+    updateSale({ cart: tirarDoCarrinho(cart, key) });
+    if (item) notify(`Item removido: ${item.product.name}${item.size !== null ? ` nº ${item.size}` : ""}`);
   }
 
   // Monta a venda para enviar. `total` e `points` são prévias: o backend devolve os valores oficiais.
@@ -80,8 +73,8 @@ export function useCarrinho() {
     client,
     paymentMethod,
     items,
-    selectedSku,
-    setSelectedSku,
+    selectedKey,
+    setSelectedKey,
     subtotal,
     maxRedeem,
     pointsUsed,

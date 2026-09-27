@@ -69,6 +69,16 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# Feito com IA: Argon2 para as senhas novas. O padrão do Django (PBKDF2 com 1.000.000 de iterações) levava
+# quase 2 s por login no container; o Argon2 é o que a documentação do Django recomenda e, com os parâmetros
+# da OWASP (src/hashers.py), confere a senha numa fração disso, gastando memória em vez de só CPU. Os PBKDF2
+# continuam na lista para as senhas antigas ainda valerem: o Django regrava cada uma no próximo login.
+PASSWORD_HASHERS = [
+    "src.hashers.Argon2OWASP",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+]
+
 LANGUAGE_CODE = "pt-br"
 TIME_ZONE = "America/Sao_Paulo"
 USE_I18N = True

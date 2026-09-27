@@ -141,15 +141,19 @@ def _cliente_json(cliente):
     }
 
 
+# Aberta (sem _so_equipe): o PDV e a loja online usam o mesmo catálogo.
 @require_GET
 def api_produtos(request):
-    produtos = services.buscar_produtos(request.GET.get("busca", ""))
-    return JsonResponse({
-        "produtos": [
-            {"sku": p.sku, "nome": p.nome, "preco": float(p.preco), "foto": p.foto}
-            for p in produtos
-        ]
-    })
+    return JsonResponse({"produtos": consultas.catalogo(request.GET.get("busca", ""))})
+
+
+# Página do produto na loja online; aberta como o catálogo.
+@require_GET
+def api_produto_detalhe(request, sku):
+    produto = consultas.detalhe_do_produto(sku)
+    if produto is None:
+        return _erro("Produto não encontrado.", status=404)
+    return JsonResponse(produto)
 
 
 @require_GET
@@ -431,21 +435,17 @@ def api_estoque(request):
     return JsonResponse(consultas.estoque_da_loja(situacao=request.GET.get("situacao", "")))
 
 
-# POST {quantidade, minimo}: grava a contagem do produto e responde com ele e a situação nova.
+# POST {quantidade, minimo, numeracao?}: grava a contagem (de uma numeração, no calçado) e responde com a
+# linha do produto como a lista a mostra, já com a situação nova.
 @require_POST
 @_so_equipe
 def api_estoque_produto(request, sku):
     try:
         dados = _ler_json(request)
-        produto = services.ajustar_estoque(sku, dados.get("quantidade"), dados.get("minimo"))
+        produto = services.ajustar_estoque(sku, dados.get("quantidade"), dados.get("minimo"), dados.get("numeracao"))
     except services.RegraViolada as e:
         return _erro(str(e))
-    return JsonResponse({
-        "sku": produto.sku,
-        "estoque": produto.estoque,
-        "minimo": produto.estoque_minimo,
-        "situacao": regras.situacao_do_estoque(produto.estoque, produto.estoque_minimo),
-    })
+    return JsonResponse(consultas.estoque_de_um_produto(produto.sku))
 
 
 # ---------- Equipe da loja (/api/equipe/) ----------

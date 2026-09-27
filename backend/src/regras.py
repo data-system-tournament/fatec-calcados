@@ -99,11 +99,13 @@ def problema_do_perfil(numeracao, nascimento, hoje) -> str | None:
     return None
 
 
-# Feito com IA: estoque simples, um número por produto (sem separar por loja nem por numeração). O gerente
-# define o mínimo de cada produto; no mínimo ou abaixo dele o produto está acabando e precisa de reposição.
+# Feito com IA: estoque sem separar por loja. Calçado tem estoque por numeração (cada número é uma
+# quantidade); acessório (meia, palmilha) tem um número só. O gerente define o mínimo de cada produto: no
+# calçado ele vale para cada numeração. No mínimo ou abaixo dele, está acabando e precisa de reposição.
 ESGOTADO, ACABANDO, EM_DIA = "ESGOTADO", "ACABANDO", "OK"
 SITUACOES_DO_ESTOQUE = (ESGOTADO, ACABANDO, EM_DIA)
 ESTOQUE_MINIMO_PADRAO = 5
+ESTOQUE_MINIMO_POR_NUMERACAO = 2
 
 
 def situacao_do_estoque(quantidade: int, minimo: int) -> str:
@@ -112,6 +114,28 @@ def situacao_do_estoque(quantidade: int, minimo: int) -> str:
     if quantidade <= minimo:
         return ACABANDO
     return EM_DIA
+
+
+# Situação de um calçado pela grade de numerações: esgotado quando não sobrou nenhum par; acabando quando
+# alguma numeração zerou ou chegou ao mínimo (o cliente daquele número já não acha o calçado).
+def situacao_da_grade(quantidades: list[int], minimo: int) -> str:
+    if sum(quantidades) <= 0:
+        return ESGOTADO
+    if any(q <= minimo for q in quantidades):
+        return ACABANDO
+    return EM_DIA
+
+
+# Numeração de um item de venda ou de contagem: obrigatória no calçado (tabela brasileira, a mesma faixa do
+# perfil) e proibida no acessório, que não tem número. Devolve o motivo de não valer, ou None.
+def problema_da_numeracao(usa_numeracao: bool, numeracao) -> str | None:
+    if not usa_numeracao:
+        return None if numeracao is None else "Esse produto não tem numeração."
+    if numeracao is None:
+        return "Escolha a numeração do calçado."
+    if type(numeracao) is not int or not NUMERACAO_MINIMA <= numeracao <= NUMERACAO_MAXIMA:
+        return f"Escolha uma numeração de {NUMERACAO_MINIMA} a {NUMERACAO_MAXIMA}."
+    return None
 
 
 # Devolve o motivo de a contagem não valer, ou None. `type(...) is int` recusa True/False e 4.5.

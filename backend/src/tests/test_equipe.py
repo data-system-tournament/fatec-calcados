@@ -65,6 +65,20 @@ class AdministradorTest(TestCase):
         call_command("criar_admin", usuario="gerente", senha="Outra#Senha2026", redefinir=True, stdout=saida)
         self.assertIn('"gerente" atualizado', saida.getvalue())
 
+    # Feito com IA: o comando do cliente segue as regras do /cadastro (services.criar_acesso) e já grava o
+    # número do calçado; se o número não vale, nada fica gravado (nem o login).
+    def test_comando_cria_login_de_cliente_com_numeracao(self):
+        saida = StringIO()
+        call_command("criar_cliente", cpf="390.533.447-05", nome="João Lima", senha=SENHA, numeracao=41, stdout=saida)
+        self.assertIn("João Lima (390.533.447-05)", saida.getvalue())
+        cliente = User.objects.get(username="39053344705").cliente
+        self.assertEqual(cliente.numeracao, 41)
+        with self.assertRaisesMessage(CommandError, "já tem acesso"):
+            call_command("criar_cliente", cpf="39053344705", nome="João Lima", senha=SENHA, stdout=StringIO())
+        with self.assertRaises(CommandError):
+            call_command("criar_cliente", cpf="52998224725", nome="Ana", senha=SENHA, numeracao=99, stdout=StringIO())
+        self.assertFalse(User.objects.filter(username="52998224725").exists())
+
 
 class LoginDaEquipeTest(TestCase):
     def setUp(self):

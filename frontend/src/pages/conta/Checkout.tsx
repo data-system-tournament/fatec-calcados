@@ -102,18 +102,27 @@ function Checkout() {
           <ul>
             {lines.map((line) => (
               // No celular o nome ocupa a linha de cima e os controles descem, para o nome não virar "Tênis R...".
-              <li key={line.sku} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line py-3 text-[13.5px] first:pt-0 last:border-0 last:pb-0">
+              <li key={line.key} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line py-3 text-[13.5px] first:pt-0 last:border-0 last:pb-0">
                 <span className="min-w-0 flex-1 max-[520px]:basis-full">
                   <span className="block truncate font-medium">{line.product.name}</span>
-                  <small className="text-xs text-muted">{formatMoney(line.product.price)} un.</small>
+                  <small className="text-xs text-muted">
+                    {line.size !== null && <>Nº {line.size} · </>}
+                    {formatMoney(line.product.price)} un.
+                  </small>
+                  {line.quantity > line.available && (
+                    <small className="block text-xs font-medium text-danger">
+                      {line.available === 0 ? "Esgotou: tire do carrinho" : `Só restam ${line.available}`}
+                    </small>
+                  )}
                 </span>
                 <span className="flex items-center gap-1">
                   <Button size="sm" aria-label={`Tirar um ${line.product.name}`} disabled={line.quantity <= 1}
-                    onClick={() => changeQuantity(line.sku, -1)}>
+                    onClick={() => changeQuantity(line.key, -1)}>
                     <Minus size={13} aria-hidden />
                   </Button>
                   <span className="w-7 text-center tabular-nums" aria-label="Quantidade">{line.quantity}</span>
-                  <Button size="sm" aria-label={`Mais um ${line.product.name}`} onClick={() => changeQuantity(line.sku, 1)}>
+                  <Button size="sm" aria-label={`Mais um ${line.product.name}`} disabled={line.quantity >= line.available}
+                    onClick={() => changeQuantity(line.key, 1)}>
                     <Plus size={13} aria-hidden />
                   </Button>
                 </span>
@@ -121,7 +130,7 @@ function Checkout() {
                 <button
                   className="grid size-7 place-items-center rounded-md text-faint hover:bg-subtle hover:text-danger"
                   aria-label={`Remover ${line.product.name}`}
-                  onClick={() => removeFromCart(line.sku)}
+                  onClick={() => removeFromCart(line.key)}
                 >
                   <Trash2 size={15} aria-hidden />
                 </button>

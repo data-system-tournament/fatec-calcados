@@ -243,6 +243,7 @@ def detalhe_da_venda(compra):
                 "sku": i.produto.sku,
                 "nome": i.produto.nome,
                 "quantidade": i.quantidade,
+                "numeracao": i.numeracao,
                 "preco_unitario": float(i.preco_unitario),
                 "subtotal": float(i.preco_unitario * i.quantidade),
             }
@@ -420,28 +421,60 @@ DIAS_DE_GIRO = 30
 _ORDEM_DA_SITUACAO = {s: i for i, s in enumerate(regras.SITUACOES_DO_ESTOQUE)}
 
 
-# Feito com IA: estoque dos produtos ativos para o gerente. Os esgotados e os que estão acabando vêm
-# primeiro (é o que precisa de reposição); `vendidos` (últimos 30 dias) ajuda a decidir quanto repor.
-# O resumo conta o catálogo inteiro; o filtro de situação só estreita a lista.
-def estoque_da_loja(situacao="", agora=None):
-    agora = agora or timezone.now()
-    produtos = Produto.objects.filter(ativo=True).annotate(
+# Feito com IA: estoque de um produto como as telas o mostram. No calçado, o total é a soma da grade e cada
+# numeração tem a sua situação (pelo mínimo do produto); no acessório, é o número único do produto.
+# `produto` precisa vir com `numeracoes` pré-carregadas (prefetch_related), senão cada produto vira uma query.
+def _estoque_do_produto(produto):
+    minimo = produto.estoque_minimo
+    if not produto.usa_numeracao:
+        return {
+            "estoque": produto.estoque,
+            "situacao": regras.situacao_do_estoque(produto.estoque, minimo),
+            "numeracoes": [],
+        }
+    grade = list(produto.numeracoes.all())
+    quantidades = [n.quantidade for n in grade]
+    return {
+        "estoque": sum(quantidades),
+        "situacao": regras.situacao_da_grade(quantidades, minimo),
+        "numeracoes": [
+            {
+                "numeracao": n.numeracao,
+                "quantidade": n.quantidade,
+                "situacao": regras.situacao_do_estoque(n.quantidade, minimo),
+            }
+            for n in grade
+        ],
+    }
+
+
+def _com_vendidos(produtos, agora):
+    return produtos.prefetch_related("numeracoes").annotate(
         vendidos=Coalesce(
             Sum("itens_vendidos__quantidade", filter=Q(itens_vendidos__compra__data__gt=agora - timedelta(days=DIAS_DE_GIRO))),
             0,
         )
     )
-    linhas = [
-        {
-            "sku": p.sku,
-            "nome": p.nome,
-            "estoque": p.estoque,
-            "minimo": p.estoque_minimo,
-            "situacao": regras.situacao_do_estoque(p.estoque, p.estoque_minimo),
-            "vendidos": p.vendidos,
-        }
-        for p in produtos
-    ]
+
+
+def _linha_do_estoque(produto):
+    return {
+        "sku": produto.sku,
+        "nome": produto.nome,
+        "usa_numeracao": produto.usa_numeracao,
+        "minimo": produto.estoque_minimo,
+        "vendidos": produto.vendidos,
+        **_estoque_do_produto(produto),
+    }
+
+
+# Feito com IA: estoque dos produtos ativos para o gerente. Os esgotados e os que estão acabando vêm
+# primeiro (é o que precisa de reposição); `vendidos` (últimos 30 dias) ajuda a decidir quanto repor.
+# O resumo conta o catálogo inteiro; o filtro de situação só estreita a lista. `numeracoes_esgotadas` conta
+# os números zerados de todos os calçados (um tênis pode ter pares e mesmo assim faltar o 40).
+def estoque_da_loja(situacao="", agora=None):
+    agora = agora or timezone.now()
+    linhas = [_linha_do_estoque(p) for p in _com_vendidos(Produto.objects.filter(ativo=True), agora)]
     linhas.sort(key=lambda linha: (_ORDEM_DA_SITUACAO[linha["situacao"]], linha["estoque"], linha["nome"]))
     resumo = {s: sum(1 for linha in linhas if linha["situacao"] == s) for s in regras.SITUACOES_DO_ESTOQUE}
     return {
@@ -450,7 +483,84 @@ def estoque_da_loja(situacao="", agora=None):
             "unidades": sum(linha["estoque"] for linha in linhas),
             "esgotados": resumo[regras.ESGOTADO],
             "acabando": resumo[regras.ACABANDO],
+            "numeracoes_esgotadas": sum(
+                1 for linha in linhas for n in linha["numeracoes"] if n["situacao"] == regras.ESGOTADO
+            ),
         },
         "dias_de_giro": DIAS_DE_GIRO,
         "produtos": [linha for linha in linhas if not situacao or linha["situacao"] == situacao],
+    }
+
+
+# A linha de um produto só, igual à da lista (a tela Estoque troca a linha depois de gravar uma contagem).
+def estoque_de_um_produto(sku, agora=None):
+    produto = _com_vendidos(Produto.objects.filter(sku=sku), agora or timezone.now()).first()
+    return _linha_do_estoque(produto) if produto else None
+
+
+# Feito com IA: catálogo do PDV e da loja online. Além de preço e foto, traz o estoque (total e por
+# numeração: o PDV mostra a quantidade de cada número e a loja online marca o esgotado) e a nota média das
+# avaliações reais dos clientes. As contagens de avaliação vêm de uma consulta à parte, porque somar
+# avaliações e numerações no mesmo annotate multiplicaria as linhas.
+def catalogo(busca=""):
+    texto = (busca or "").strip()
+    produtos = Produto.objects.filter(ativo=True).prefetch_related("numeracoes")
+    if texto:
+        produtos = produtos.filter(Q(nome__icontains=texto) | Q(sku__startswith=texto))
+    notas = {
+        linha["produto_id"]: linha
+        for linha in Avaliacao.objects.values("produto_id").annotate(media=Avg("nota"), quantidade=Count("id"))
+    }
+    return [
+        {
+            "sku": p.sku,
+            "nome": p.nome,
+            "preco": float(p.preco),
+            "foto": p.foto,
+            "usa_numeracao": p.usa_numeracao,
+            **_estoque_do_produto(p),
+            "nota_media": round(notas[p.id]["media"], 1) if p.id in notas else None,
+            "avaliacoes": notas[p.id]["quantidade"] if p.id in notas else 0,
+        }
+        for p in produtos
+    ]
+
+
+AVALIACOES_NA_PAGINA = 20
+
+
+# Feito com IA: página do produto na loja online: o que está no catálogo, mais a descrição, a distribuição das
+# notas e as avaliações mais recentes. Quem avaliou aparece só pelo primeiro nome (é uma página que qualquer
+# cliente vê); conta excluída aparece como "Cliente excluído".
+def detalhe_do_produto(sku):
+    produto = Produto.objects.filter(sku=sku, ativo=True).prefetch_related("numeracoes").first()
+    if produto is None:
+        return None
+    avaliacoes = produto.avaliacoes.select_related("cliente")
+    resumo = avaliacoes.aggregate(total=Count("id"), media=Avg("nota"))
+    por_nota = dict(avaliacoes.values_list("nota").annotate(q=Count("id")))
+    return {
+        "sku": produto.sku,
+        "nome": produto.nome,
+        "preco": float(produto.preco),
+        "foto": produto.foto,
+        "descricao": produto.descricao,
+        "usa_numeracao": produto.usa_numeracao,
+        **_estoque_do_produto(produto),
+        "nota_media": round(resumo["media"], 1) if resumo["media"] is not None else None,
+        "avaliacoes": resumo["total"],
+        "por_nota": [
+            {"nota": n, "quantidade": por_nota.get(n, 0)}
+            for n in range(regras.NOTA_MAXIMA, regras.NOTA_MINIMA - 1, -1)
+        ],
+        "comentarios": [
+            {
+                "id": a.id,
+                "data": a.criada_em,
+                "nome": regras.NOME_DE_CONTA_EXCLUIDA if a.cliente.excluido_em else a.cliente.nome.split()[0],
+                "nota": a.nota,
+                "comentario": a.comentario,
+            }
+            for a in avaliacoes.order_by("-criada_em", "-id")[:AVALIACOES_NA_PAGINA]
+        ],
     }

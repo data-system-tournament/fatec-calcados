@@ -1,28 +1,31 @@
 import { Minus, Plus, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { CartLine } from "../../types";
+import { chaveDoItem } from "../../utils/carrinho";
 import { formatMoney } from "../../utils/format";
 import { iconeDoProduto } from "./categorias";
 
+// Os itens são identificados pela chave (utils/carrinho.chaveDoItem): o mesmo tênis em dois números são dois itens.
 type CartProps = {
   items: CartLine[];
-  selectedSku: string | null;
-  onSelect: (sku: string) => void;
-  onChangeQuantity: (sku: string, change: number) => void;
-  onRemove: (sku: string) => void;
+  selectedKey: string | null;
+  onSelect: (key: string) => void;
+  onChangeQuantity: (key: string, change: number) => void;
+  onRemove: (key: string) => void;
 };
 
-function Cart({ items, selectedSku, onSelect, onChangeQuantity, onRemove }: CartProps) {
+function Cart({ items, selectedKey, onSelect, onChangeQuantity, onRemove }: CartProps) {
   return (
     <ul className="flex flex-col gap-1.5">
       {items.map((item) => {
-        const selected = item.sku === selectedSku;
+        const key = chaveDoItem(item);
+        const selected = key === selectedKey;
         const Icone = iconeDoProduto(item.product.name);
         return (
           <li
-            key={item.sku}
+            key={key}
             className={`flex cursor-pointer items-center gap-3 rounded-[10px] border p-2 transition-colors duration-100 ${selected ? "border-ink bg-surface" : "border-line bg-surface hover:border-line-2"}`}
-            onClick={() => onSelect(item.sku)}
+            onClick={() => onSelect(key)}
           >
             <span className="grid size-9 flex-none place-items-center rounded-lg bg-subtle text-muted">
               <Icone size={18} strokeWidth={1.6} aria-hidden />
@@ -31,6 +34,7 @@ function Cart({ items, selectedSku, onSelect, onChangeQuantity, onRemove }: Cart
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[14px] font-medium">{item.product.name}</span>
               <small className="block text-xs text-muted tabular-nums">
+                {item.size !== null && <b className="font-semibold text-ink">Nº {item.size} · </b>}
                 {formatMoney(item.product.price)} un. · {item.sku}
               </small>
             </span>
@@ -41,12 +45,12 @@ function Cart({ items, selectedSku, onSelect, onChangeQuantity, onRemove }: Cart
               aria-label={`Quantidade de ${item.product.name}`}
               onClick={(event) => event.stopPropagation()}
             >
-              <QuantityButton label={`Tirar um ${item.product.name}`} disabled={item.quantity <= 1} onClick={() => onChangeQuantity(item.sku, -1)}>
+              <QuantityButton label={`Tirar um ${item.product.name}`} disabled={item.quantity <= 1} onClick={() => onChangeQuantity(key, -1)}>
                 <Minus size={14} aria-hidden />
               </QuantityButton>
               {/* aria-live: quem usa leitor de tela ouve a nova quantidade depois de apertar − ou +. */}
               <b className="min-w-7 text-center text-[14px] font-semibold tabular-nums" aria-live="polite">{item.quantity}</b>
-              <QuantityButton label={`Mais um ${item.product.name}`} onClick={() => onChangeQuantity(item.sku, 1)}>
+              <QuantityButton label={`Mais um ${item.product.name}`} onClick={() => onChangeQuantity(key, 1)}>
                 <Plus size={14} aria-hidden />
               </QuantityButton>
             </span>
@@ -61,7 +65,7 @@ function Cart({ items, selectedSku, onSelect, onChangeQuantity, onRemove }: Cart
               title="Remover item"
               onClick={(event) => {
                 event.stopPropagation();
-                onRemove(item.sku);
+                onRemove(key);
               }}
             >
               <Trash2 size={16} aria-hidden />

@@ -83,6 +83,21 @@ class RegrasPurasTest(TestCase):
         self.assertEqual(regras.situacao_do_estoque(6, 5), regras.EM_DIA)
         self.assertEqual(regras.situacao_do_estoque(1, 0), regras.EM_DIA)
 
+    def test_grade_esgota_so_sem_nenhum_par_e_acaba_quando_falta_um_numero(self):
+        self.assertEqual(regras.situacao_da_grade([0, 0, 0], 2), regras.ESGOTADO)
+        self.assertEqual(regras.situacao_da_grade([], 2), regras.ESGOTADO)
+        self.assertEqual(regras.situacao_da_grade([9, 0, 9], 2), regras.ACABANDO)
+        self.assertEqual(regras.situacao_da_grade([9, 2, 9], 2), regras.ACABANDO)
+        self.assertEqual(regras.situacao_da_grade([9, 3, 9], 2), regras.EM_DIA)
+
+    def test_numeracao_obrigatoria_no_calcado_e_proibida_no_acessorio(self):
+        self.assertIsNone(regras.problema_da_numeracao(True, 40))
+        self.assertIsNone(regras.problema_da_numeracao(False, None))
+        self.assertIn("Escolha a numeração", regras.problema_da_numeracao(True, None))
+        for invalida in (15, 49, 40.5, "40", True):
+            self.assertIn("de 16 a 48", regras.problema_da_numeracao(True, invalida))
+        self.assertIn("não tem numeração", regras.problema_da_numeracao(False, 40))
+
     def test_contagem_de_estoque_aceita_so_inteiros_de_zero_para_cima(self):
         self.assertIsNone(regras.problema_do_estoque(0, 0))
         self.assertIsNone(regras.problema_do_estoque(40, 5))

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { REGISTER_CODE } from "../config";
 import {
   buyOnline, deleteAccount, fetchAccount, fetchReviews, fetchStoreReviews, fetchActions, fetchClient, fetchClientProfile, fetchClients, fetchDashboard,
-  fetchProducts, fetchSaleDetail, fetchSales, fetchStaff, fetchStock, registerClient, sendReview, sendSale, signIn,
+  fetchProductDetail, fetchProducts, fetchSaleDetail, fetchSales, fetchStaff, fetchStock, registerClient, sendReview, sendSale, signIn,
   staffSignIn, staffSignOut, updateProfile, updateStock,
 } from "../services/api";
 import type { Sale } from "../types";
@@ -13,7 +13,7 @@ import { clientePdvApi, listaDeClientesApi, perfilDoClienteApi } from "./dados/c
 import { avaliacoesApi, painelDoClienteApi } from "./dados/conta";
 import { dashboardApi } from "./dados/dashboard";
 import { estoqueApi } from "./dados/estoque";
-import { produtosApi } from "./dados/produtos";
+import { detalheDoProdutoApi, produtosApi } from "./dados/produtos";
 import { detalheDaVendaApi, listaDeVendasApi } from "./dados/vendas";
 
 // Testa a tradução da API (português) para os tipos das telas, com o fetch simulado e os dados de testes/dados/.
@@ -46,11 +46,30 @@ describe("requisição e erros", () => {
 });
 
 describe("produtos e ações", () => {
-  it("converte os produtos", async () => {
+  it("converte os produtos com estoque, numerações e nota", async () => {
     simularApi([{ corpo: produtosApi }]);
     expect(await fetchProducts()).toEqual([
-      { sku: "TEN-001", name: "Tênis Corrida Leve", price: 459.7, photo: "https://images.unsplash.com/photo-1?w=600" },
-      { sku: "MEI-002", name: "Meia Esportiva", price: 39.95, photo: null },
+      {
+        sku: "TEN-001", name: "Tênis Corrida Leve", price: 459.7, photo: "https://images.unsplash.com/photo-1?w=600",
+        usesSizes: true, stock: 7, stockStatus: "ACABANDO",
+        sizes: [{ size: 39, quantity: 7, status: "OK" }, { size: 40, quantity: 0, status: "ESGOTADO" }],
+        rating: 4.5, reviewCount: 2,
+      },
+      {
+        sku: "MEI-002", name: "Meia Esportiva", price: 39.95, photo: null,
+        usesSizes: false, stock: 12, stockStatus: "OK", sizes: [], rating: null, reviewCount: 0,
+      },
+    ]);
+  });
+
+  it("converte a página do produto com descrição e avaliações", async () => {
+    const fetch = simularApi([{ corpo: detalheDoProdutoApi }]);
+    const produto = await fetchProductDetail("TEN-001");
+    expect(chamada(fetch).url).toBe("/api/produtos/TEN-001/");
+    expect(produto).toMatchObject({ sku: "TEN-001", description: "Tênis leve para correr.", rating: 4.5 });
+    expect(produto.byRating[0]).toEqual({ rating: 5, count: 1 });
+    expect(produto.comments).toEqual([
+      { id: 9, date: "2026-09-10T10:00:00-03:00", name: "Ana", rating: 5, comment: "Muito confortável, uso todo dia." },
     ]);
   });
 
@@ -133,7 +152,7 @@ describe("vendas", () => {
     id: detalheDaVendaApi.id,
     cpf: "52998224725",
     clientName: "Ana Souza",
-    items: [{ sku: "TEN-001", quantity: 1 }, { sku: "MEI-002", quantity: 2 }],
+    items: [{ sku: "TEN-001", quantity: 1, size: 40 }, { sku: "MEI-002", quantity: 2, size: null }],
     payment: "PIX",
     pointsToRedeem: 1000,
     date: "2026-09-20T15:10:00-03:00",
@@ -143,7 +162,7 @@ describe("vendas", () => {
     time: "15:10",
   };
 
-  it("envia só SKU e quantidade (o preço vem do banco) e converte o resultado", async () => {
+  it("envia só SKU, quantidade e numeração (o preço vem do banco) e converte o resultado", async () => {
     const fetch = simularApi([
       { status: 201, corpo: { valor_pago: 489.6, desconto: 50, pontos_ganhos: 537, saldo_atual: 787 } },
     ]);
@@ -152,12 +171,21 @@ describe("vendas", () => {
       id: venda.id,
       caixa: REGISTER_CODE,
       cpf: "52998224725",
-      itens: [{ sku: "TEN-001", quantidade: 1 }, { sku: "MEI-002", quantidade: 2 }],
+      itens: [{ sku: "TEN-001", quantidade: 1, numeracao: 40 }, { sku: "MEI-002", quantidade: 2, numeracao: null }],
       forma_pagamento: "PIX",
       pontos_resgate: 1000,
       data: venda.date,
     });
     expect(resultado).toEqual({ total: 489.6, discount: 50, pointsEarned: 537, balance: 787 });
+  });
+
+  it("venda da fila offline de antes da numeração vai com numeração null", async () => {
+    const fetch = simularApi([
+      { status: 201, corpo: { valor_pago: 39.95, desconto: 0, pontos_ganhos: 0, saldo_atual: null } },
+    ]);
+    const antiga = { ...venda, items: [{ sku: "MEI-002", quantity: 1 }] } as unknown as Sale;
+    await sendSale(antiga);
+    expect(chamada(fetch).body).toMatchObject({ itens: [{ sku: "MEI-002", quantidade: 1, numeracao: null }] });
   });
 
   it("converte a lista com filtros e venda sem cliente", async () => {
@@ -173,7 +201,8 @@ describe("vendas", () => {
     simularApi([{ corpo: detalheDaVendaApi }]);
     const detalhe = await fetchSaleDetail(detalheDaVendaApi.id);
     expect(detalhe).toMatchObject({ store: "Araras", levelAtPurchase: "Prata", paid: 489.6, discount: 50 });
-    expect(detalhe.items[1]).toEqual({ name: "Meia Esportiva", sku: "MEI-002", quantity: 2, unitPrice: 39.95, subtotal: 79.9 });
+    expect(detalhe.items[0].size).toBe(40);
+    expect(detalhe.items[1]).toEqual({ name: "Meia Esportiva", sku: "MEI-002", quantity: 2, size: null, unitPrice: 39.95, subtotal: 79.9 });
   });
 });
 
@@ -238,8 +267,9 @@ describe("área do cliente", () => {
     const fetch = simularApi([
       { status: 201, corpo: { id: "c1", valor_pago: 459.7, desconto: 0, pontos_ganhos: 505, saldo_atual: 1755 } },
     ]);
-    const resultado = await buyOnline({ id: "c1", items: [{ sku: "TEN-001", quantity: 1 }], payment: "PIX", pointsToRedeem: 0 });
+    const resultado = await buyOnline({ id: "c1", items: [{ sku: "TEN-001", quantity: 1, size: 39 }], payment: "PIX", pointsToRedeem: 0 });
     expect(chamada(fetch).body).not.toHaveProperty("cpf");
+    expect(chamada(fetch).body).toMatchObject({ itens: [{ sku: "TEN-001", quantidade: 1, numeracao: 39 }] });
     expect(resultado).toEqual({ id: "c1", total: 459.7, discount: 0, pointsEarned: 505, balance: 1755 });
   });
 });
@@ -288,9 +318,12 @@ describe("estoque", () => {
     const fetch = simularApi([{ corpo: estoqueApi }]);
     const estoque = await fetchStock("ACABANDO");
     expect(chamada(fetch).url).toBe("/api/estoque/?situacao=ACABANDO");
-    expect(estoque.summary).toEqual({ products: 3, units: 45, outOfStock: 1, runningLow: 1 });
+    expect(estoque.summary).toEqual({ products: 3, units: 45, outOfStock: 1, runningLow: 1, sizesOut: 1 });
     expect(estoque.soldDays).toBe(30);
-    expect(estoque.items[1]).toEqual({ sku: "MEI-002", name: "Meia Esportiva", quantity: 3, minimum: 5, status: "ACABANDO", sold: 11 });
+    expect(estoque.items[1]).toEqual({
+      sku: "MEI-002", name: "Meia Esportiva", usesSizes: false, quantity: 3, minimum: 5, status: "ACABANDO", sold: 11, sizes: [],
+    });
+    expect(estoque.items[2].sizes[1]).toEqual({ size: 40, quantity: 22, status: "OK" });
   });
 
   it("sem filtro, não manda parâmetro", async () => {
@@ -300,10 +333,18 @@ describe("estoque", () => {
   });
 
   it("acerta a contagem com quantidade e mínimo", async () => {
-    const fetch = simularApi([{ corpo: { sku: "BOT-003", estoque: 20, minimo: 4, situacao: "OK" } }]);
+    const fetch = simularApi([{ corpo: { ...estoqueApi.produtos[0], estoque: 20, minimo: 4, situacao: "OK" } }]);
     const produto = await updateStock("BOT-003", 20, 4);
-    expect(chamada(fetch)).toMatchObject({ url: "/api/estoque/BOT-003/", method: "POST", body: { quantidade: 20, minimo: 4 } });
-    expect(produto).toEqual({ sku: "BOT-003", quantity: 20, minimum: 4, status: "OK" });
+    expect(chamada(fetch)).toMatchObject({ url: "/api/estoque/BOT-003/", method: "POST" });
+    expect(chamada(fetch).body).toEqual({ quantidade: 20, minimo: 4 });
+    expect(produto).toMatchObject({ sku: "BOT-003", quantity: 20, minimum: 4, status: "OK" });
+  });
+
+  it("no calçado, a contagem é de uma numeração", async () => {
+    const fetch = simularApi([{ corpo: estoqueApi.produtos[2] }]);
+    const produto = await updateStock("TEN-001", 20, 2, 39);
+    expect(chamada(fetch).body).toEqual({ quantidade: 20, minimo: 2, numeracao: 39 });
+    expect(produto.sizes).toHaveLength(2);
   });
 
   it("mostra o erro do backend", async () => {

@@ -10,9 +10,11 @@ export type ContaValue = {
   signOut: () => Promise<void>;
   products: Product[];
   cart: CartItem[];
-  addToCart: (product: Product) => void;
-  changeQuantity: (sku: string, change: number) => void;
-  removeFromCart: (sku: string) => void;
+  // Calçado vai com a numeração; acessório com size null. changeQuantity/removeFromCart recebem a chave do
+  // item (utils/carrinho.chaveDoItem), que separa o mesmo produto em números diferentes.
+  addToCart: (sku: string, size: number | null, quantity?: number) => void;
+  changeQuantity: (chave: string, change: number) => void;
+  removeFromCart: (chave: string) => void;
   clearCart: () => void;
 };
 

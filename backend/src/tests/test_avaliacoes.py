@@ -5,6 +5,7 @@ from django.test import TestCase
 
 from src import regras, services
 from src.models import Avaliacao, Caixa, Loja, MovimentoPontos, Produto
+from src.tests.apoio import entrar_como_equipe
 
 Tipo = MovimentoPontos.Tipo
 SENHA = "sapato-azul-2026"
@@ -117,6 +118,7 @@ class AvaliacoesDaLojaTest(TestCase):
     """Tela de avaliações do gerente (GET /api/avaliacoes/), só leitura."""
 
     def setUp(self):
+        entrar_como_equipe(self.client)
         loja = Loja.objects.create(nome="Loja Centro", cidade="Araras")
         caixa = Caixa.objects.create(codigo="centro-01", nome="Caixa 01", loja=loja)
         Produto.objects.create(sku="7890001", nome="Tênis Runner", preco=Decimal("289.90"))

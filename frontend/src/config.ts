@@ -12,3 +12,6 @@ export const PAYMENT_METHODS = [
 export function paymentLabel(code: string): string {
   return PAYMENT_METHODS.find((method) => method.code === code)?.label ?? code;
 }
+
+// Contato do encarregado de dados (LGPD), mostrado na Política de Privacidade. Troque pelo e-mail real.
+export const PRIVACY_EMAIL = "privacidade@fatecalcados.com.br";

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.core.paginator import EmptyPage, Paginator
@@ -7,7 +8,7 @@ from django.utils import timezone
 
 from . import cpf as cpf_utils
 from . import indicadores, regras
-from .models import Avaliacao, Caixa, Compra, FormaPagamento, ItemCompra, MovimentoPontos
+from .models import Avaliacao, Caixa, Compra, FormaPagamento, ItemCompra, MovimentoPontos, Produto
 
 Tipo = MovimentoPontos.Tipo
 
@@ -270,7 +271,7 @@ def painel_do_cliente(cliente, agora=None):
     economia = cliente.compras.aggregate(t=Coalesce(Sum("desconto"), Decimal("0")))["t"]
     mais_comprados = (
         ItemCompra.objects.filter(compra__cliente=cliente, produto__ativo=True)
-        .values("produto__sku", "produto__nome", "produto__preco")
+        .values("produto__sku", "produto__nome", "produto__preco", "produto__foto")
         .annotate(unidades=Sum("quantidade"))
         .order_by("-unidades", "produto__nome")[:3]
     )
@@ -299,6 +300,7 @@ def painel_do_cliente(cliente, agora=None):
                 "sku": linha["produto__sku"],
                 "nome": linha["produto__nome"],
                 "preco": float(linha["produto__preco"]),
+                "foto": linha["produto__foto"],
                 "unidades": linha["unidades"],
             }
             for linha in mais_comprados
@@ -312,7 +314,7 @@ def _para_avaliar(cliente):
     return (
         ItemCompra.objects.filter(compra__cliente=cliente)
         .exclude(produto_id__in=avaliados)
-        .values("produto__sku", "produto__nome", "produto__preco")
+        .values("produto__sku", "produto__nome", "produto__preco", "produto__foto")
         .annotate(ultima_compra=Max("compra__data"))
         .order_by("-ultima_compra", "produto__nome")
     )
@@ -332,6 +334,7 @@ def avaliacoes_do_cliente(cliente):
                 "sku": linha["produto__sku"],
                 "nome": linha["produto__nome"],
                 "preco": float(linha["produto__preco"]),
+                "foto": linha["produto__foto"],
                 "ultima_compra": linha["ultima_compra"],
             }
             for linha in para_avaliar
@@ -340,6 +343,7 @@ def avaliacoes_do_cliente(cliente):
             {
                 "sku": a.produto.sku,
                 "nome": a.produto.nome,
+                "foto": a.produto.foto,
                 "nota": a.nota,
                 "comentario": a.comentario,
                 "data": a.criada_em,
@@ -409,4 +413,44 @@ def avaliacoes_da_loja(produto="", nota="", pagina=1):
             }
             for a in pagina_atual
         ],
+    }
+
+
+DIAS_DE_GIRO = 30
+_ORDEM_DA_SITUACAO = {s: i for i, s in enumerate(regras.SITUACOES_DO_ESTOQUE)}
+
+
+# Feito com IA: estoque dos produtos ativos para o gerente. Os esgotados e os que estão acabando vêm
+# primeiro (é o que precisa de reposição); `vendidos` (últimos 30 dias) ajuda a decidir quanto repor.
+# O resumo conta o catálogo inteiro; o filtro de situação só estreita a lista.
+def estoque_da_loja(situacao="", agora=None):
+    agora = agora or timezone.now()
+    produtos = Produto.objects.filter(ativo=True).annotate(
+        vendidos=Coalesce(
+            Sum("itens_vendidos__quantidade", filter=Q(itens_vendidos__compra__data__gt=agora - timedelta(days=DIAS_DE_GIRO))),
+            0,
+        )
+    )
+    linhas = [
+        {
+            "sku": p.sku,
+            "nome": p.nome,
+            "estoque": p.estoque,
+            "minimo": p.estoque_minimo,
+            "situacao": regras.situacao_do_estoque(p.estoque, p.estoque_minimo),
+            "vendidos": p.vendidos,
+        }
+        for p in produtos
+    ]
+    linhas.sort(key=lambda linha: (_ORDEM_DA_SITUACAO[linha["situacao"]], linha["estoque"], linha["nome"]))
+    resumo = {s: sum(1 for linha in linhas if linha["situacao"] == s) for s in regras.SITUACOES_DO_ESTOQUE}
+    return {
+        "resumo": {
+            "produtos": len(linhas),
+            "unidades": sum(linha["estoque"] for linha in linhas),
+            "esgotados": resumo[regras.ESGOTADO],
+            "acabando": resumo[regras.ACABANDO],
+        },
+        "dias_de_giro": DIAS_DE_GIRO,
+        "produtos": [linha for linha in linhas if not situacao or linha["situacao"] == situacao],
     }

@@ -7,7 +7,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import F, Q, Sum
+from django.db.models.functions import Greatest
 from django.utils import timezone
 
 from . import cpf as cpf_utils
@@ -238,7 +239,30 @@ def registrar_venda(
         ItemCompra(compra=compra, produto=produto, quantidade=quantidade, preco_unitario=produto.preco)
         for produto, quantidade in linhas
     ])
+    _baixar_estoque(linhas)
     return compra, True
+
+
+# Feito com IA: a venda tira do estoque, mas nunca é recusada por falta dele: no caixa o produto já está
+# na mão do cliente (e a venda offline chega depois), então um estoque zerado só quer dizer que a contagem
+# está errada. Greatest segura em zero; o F() subtrai no banco, sem perder vendas simultâneas.
+def _baixar_estoque(linhas):
+    for produto, quantidade in linhas:
+        Produto.objects.filter(pk=produto.pk).update(estoque=Greatest(F("estoque") - quantidade, 0))
+
+
+# Contagem feita pelo gerente (tela Estoque): grava a quantidade que está na prateleira e o mínimo.
+def ajustar_estoque(sku, quantidade, minimo) -> Produto:
+    produto = Produto.objects.filter(sku=str(sku or "").strip()).first()
+    if produto is None:
+        raise RegraViolada("Produto não encontrado.")
+    problema = regras.problema_do_estoque(quantidade, minimo)
+    if problema:
+        raise RegraViolada(problema)
+    produto.estoque = quantidade
+    produto.estoque_minimo = minimo
+    produto.save(update_fields=["estoque", "estoque_minimo"])
+    return produto
 
 
 
@@ -381,3 +405,77 @@ def avaliar_produto(cliente: Cliente, sku, nota, comentario, data=None) -> Avali
     return Avaliacao.objects.create(
         cliente=cliente, produto=produto, nota=nota, comentario=comentario.strip(), criada_em=data, movimento=lote
     )
+
+
+# ---------- Equipe da loja (área /admin) ----------
+
+# Feito com IA: cria (ou, com redefinir=True, atualiza a senha de) um administrador da loja: um User do
+# Django com is_staff e is_superuser, que entra na área /admin do sistema e também no admin do Django.
+# Usuário só com números é recusado porque o username dos clientes é o CPF; assim os dois nunca se
+# confundem. A senha passa pelos mesmos validadores do cadastro do cliente.
+def criar_administrador(usuario, senha, nome="", redefinir=False) -> User:
+    usuario = str(usuario or "").strip()
+    if not usuario:
+        raise RegraViolada("Informe o nome de usuário.")
+    if usuario.isdigit():
+        raise RegraViolada("Use letras no nome de usuário: só números fica reservado para o CPF dos clientes.")
+
+    existente = User.objects.filter(username=usuario).first()
+    if existente and not redefinir:
+        raise RegraViolada(f'O usuário "{usuario}" já existe. Use --redefinir para trocar a senha dele.')
+    if existente and hasattr(existente, "cliente"):
+        raise RegraViolada(f'O usuário "{usuario}" é de um cliente e não pode virar administrador.')
+
+    admin = existente or User(username=usuario)
+    if nome:
+        admin.first_name = str(nome).strip()[:150]
+    try:
+        validate_password(senha or "", admin)
+    except ValidationError as e:
+        raise RegraViolada(" ".join(e.messages))
+    admin.is_staff = True
+    admin.is_superuser = True
+    admin.is_active = True
+    admin.set_password(senha)
+    admin.save()
+    return admin
+
+
+# Entrada da equipe em /admin/entrar. Só usuários da equipe (is_staff): o login de cliente não serve aqui.
+def autenticar_equipe(request, usuario, senha) -> User:
+    user = authenticate(request, username=str(usuario or "").strip(), password=senha or "")
+    if user is None or not user.is_staff:
+        raise RegraViolada("Usuário ou senha incorretos.")
+    login(request, user)
+    return user
+
+
+# Feito com IA: "Excluir minha conta" (LGPD, direito de eliminação). Pede a senha (quem pegou o computador
+# logado não apaga a conta de outra pessoa). Ordem: expira os lotes vencidos -> cancela os pontos que ainda
+# valem, como EXPIRACAO (o saldo vira zero e o custo em aberto do programa cai junto) -> troca nome e CPF
+# por marcadores e apaga numeração, nascimento e autorização de contato -> apaga o login. As vendas ficam,
+# sem ninguém ligado a elas, e as avaliações também, assinadas como "Cliente excluído".
+@transaction.atomic
+def excluir_conta(cliente: Cliente, senha, agora=None) -> Cliente:
+    agora = agora or timezone.now()
+    cliente = Cliente.objects.select_for_update().get(pk=cliente.pk)
+    usuario = cliente.usuario
+    if usuario is None or not usuario.check_password(senha or ""):
+        raise RegraViolada("A senha não confere.")
+
+    expirar_pontos(cliente, agora)
+    for lote in cliente.movimentos.filter(tipo=Tipo.ACUMULO, restante__gt=0):
+        MovimentoPontos.objects.create(cliente=cliente, tipo=Tipo.EXPIRACAO, pontos=-lote.restante, data=agora)
+        lote.restante = 0
+        lote.save(update_fields=["restante"])
+
+    cliente.nome = regras.NOME_DE_CONTA_EXCLUIDA
+    cliente.cpf = regras.cpf_de_conta_excluida(cliente.pk)
+    cliente.numeracao = None
+    cliente.nascimento = None
+    cliente.contato_autorizado_em = None
+    cliente.usuario = None
+    cliente.excluido_em = agora
+    cliente.save()
+    usuario.delete()
+    return cliente

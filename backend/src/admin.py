@@ -19,9 +19,13 @@ class CaixaAdmin(admin.ModelAdmin):
 
 @admin.register(Produto)
 class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ("nome", "sku", "preco", "ativo")
+    list_display = ("nome", "sku", "preco", "estoque", "estoque_minimo", "ativo", "tem_foto")
     list_filter = ("ativo",)
     search_fields = ("nome", "sku")
+
+    @admin.display(description="Foto", boolean=True)
+    def tem_foto(self, obj):
+        return bool(obj.foto)
 
 
 class ClienteForm(forms.ModelForm):

@@ -13,6 +13,8 @@ import { useAcoes } from "../contexts/acoes";
 import { AcoesProvider } from "../contexts/AcoesProvider";
 import { useCaixa } from "../contexts/caixa";
 import { CaixaProvider } from "../contexts/CaixaProvider";
+import { useEquipe } from "../contexts/equipe";
+import { EquipeProvider } from "../contexts/EquipeProvider";
 import { ToastProvider } from "../contexts/ToastProvider";
 import { useAtalhoBusca } from "../hooks/useAtalhoBusca";
 import { useSidebar } from "../hooks/useSidebar";
@@ -28,11 +30,13 @@ function todayLabel(): string {
 function MainLayout() {
   return (
     <ToastProvider>
-      <CaixaProvider>
-        <AcoesProvider>
-          <Shell />
-        </AcoesProvider>
-      </CaixaProvider>
+      <EquipeProvider>
+        <CaixaProvider>
+          <AcoesProvider>
+            <Shell />
+          </AcoesProvider>
+        </CaixaProvider>
+      </EquipeProvider>
     </ToastProvider>
   );
 }
@@ -43,6 +47,7 @@ const asideMobile = "fixed inset-y-0 left-0 z-40 w-[260px] border-r border-line 
 
 function Shell() {
   const isPdv = useMatch("/admin/pdv") !== null;
+  const equipe = useEquipe();
   const { pathname } = useLocation();
   const [searching, setSearching] = useState(false);
   const [ajustando, setAjustando] = useState(false);
@@ -109,6 +114,7 @@ function Shell() {
           onTour={tour.iniciar}
           onAjuda={() => setAjuda(true)}
           onAcessibilidade={() => setAjustando(true)}
+          onSair={equipe.signOut}
         />
       </aside>
 

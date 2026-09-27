@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { Card, CardTitle } from "../../components/ui/Card";
+import { Modal } from "../../components/ui/Modal";
 import { errorClass, fieldLabelClass, hintClass, inputClass } from "../../components/ui/styles";
 import { useConta } from "../../contexts/conta";
 import { useToast } from "../../contexts/toast";
-import { errorMessage, updateProfile } from "../../services/api";
+import { deleteAccount, errorMessage, updateProfile } from "../../services/api";
 import type { ClientDashboard } from "../../types";
-import { formatDay } from "../../utils/format";
+import { formatDay, formatNumber } from "../../utils/format";
 
 // Os mesmos limites de regras.py (NUMERACAO_MINIMA/MAXIMA); quem valida de verdade é o backend.
 const NUMERACOES = Array.from({ length: 48 - 16 + 1 }, (_, i) => 16 + i);
@@ -28,6 +30,7 @@ function MeusDados({ account }: { account: ClientDashboard }) {
         </dl>
         <p className={hintClass}>Para corrigir nome ou CPF, fale com a equipe em qualquer loja FATECalçados.</p>
       </Card>
+      <ExcluirConta account={account} />
     </div>
   );
 }
@@ -104,7 +107,8 @@ function Preferencias({ account }: { account: ClientDashboard }) {
             <small className="mt-0.5 block text-xs text-muted">
               {account.contactConsentAt
                 ? `Autorizado em ${formatDay(account.contactConsentAt)}. Você pode desmarcar quando quiser.`
-                : "Opcional. Você pode desmarcar quando quiser."}
+                : "Opcional. Você pode desmarcar quando quiser."}{" "}
+              <Link to="/privacidade" className="underline underline-offset-[3px] hover:text-ink">Como usamos seus dados</Link>
             </small>
           </span>
         </label>
@@ -117,6 +121,79 @@ function Preferencias({ account }: { account: ClientDashboard }) {
         </div>
       </form>
     </Card>
+  );
+}
+
+// Feito com IA: exclusão da conta (LGPD). Fica no fim de Meus dados, discreta, e abre um modal que diz o que
+// acontece (inclusive a perda dos pontos, com o saldo atual) e pede a senha. Depois de excluir, a sessão já
+// acabou no backend: limpa o estado da conta e volta para a página inicial.
+function ExcluirConta({ account }: { account: ClientDashboard }) {
+  const [aberto, setAberto] = useState(false);
+
+  return (
+    <Card className="p-[18px]">
+      <CardTitle>Excluir minha conta</CardTitle>
+      <p className="-mt-1 mb-3 text-[13px] text-muted">
+        Apaga seus dados pessoais e sua senha. Os pontos que você ainda tem são cancelados.
+      </p>
+      <Button onClick={() => setAberto(true)} className="text-danger">Excluir minha conta</Button>
+      {aberto && <ConfirmarExclusao points={account.points} onClose={() => setAberto(false)} />}
+    </Card>
+  );
+}
+
+function ConfirmarExclusao({ points, onClose }: { points: number; onClose: () => void }) {
+  const { signOut } = useConta();
+  const navigate = useNavigate();
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState("");
+  const [excluindo, setExcluindo] = useState(false);
+
+  async function excluir(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setExcluindo(true);
+    setErro("");
+    try {
+      await deleteAccount(senha);
+    } catch (error) {
+      setErro(errorMessage(error));
+      setExcluindo(false);
+      return;
+    }
+    await signOut();
+    navigate("/", { replace: true });
+  }
+
+  const footer = (
+    <>
+      <Button onClick={onClose}>Cancelar</Button>
+      <Button variant="dark" type="submit" form="excluir-conta" disabled={!senha || excluindo}>
+        {excluindo ? "Excluindo..." : "Excluir de vez"}
+      </Button>
+    </>
+  );
+
+  return (
+    <Modal title="Excluir minha conta" onClose={onClose} footer={footer}>
+      <form id="excluir-conta" onSubmit={excluir}>
+        <ul className="mb-3.5 flex list-disc flex-col gap-1.5 pl-5 text-[13.5px] text-ink-2">
+          <li>Apagamos seu nome, CPF, numeração, data de nascimento, autorização de ofertas e senha.</li>
+          <li>
+            {points > 0
+              ? <>Seus <b>{formatNumber(points)} pontos</b> são cancelados e não voltam.</>
+              : "Você não tem pontos para perder."}
+          </li>
+          <li>As compras continuam no registro da loja, sem ligação com você.</li>
+          <li>Não dá para desfazer. Se voltar a comprar, você entra no programa do zero.</li>
+        </ul>
+        <label className={fieldLabelClass}>
+          Digite sua senha para confirmar
+          <input className={inputClass} type="password" autoComplete="current-password" autoFocus
+            value={senha} onChange={(e) => setSenha(e.target.value)} />
+        </label>
+        {erro && <p className={errorClass} role="alert">{erro}</p>}
+      </form>
+    </Modal>
   );
 }
 

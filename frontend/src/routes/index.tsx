@@ -3,6 +3,7 @@ import ClienteLayout from "../layouts/ClienteLayout";
 import MainLayout from "../layouts/MainLayout";
 import Actions from "../pages/acoes/Actions";
 import AvaliacoesLoja from "../pages/avaliacoes/AvaliacoesLoja";
+import Estoque from "../pages/estoque/Estoque";
 import ClientePerfil from "../pages/clientes/ClientePerfil";
 import Clientes from "../pages/clientes/Clientes";
 import Avaliacoes from "../pages/conta/Avaliacoes";
@@ -14,6 +15,8 @@ import Dashboard from "../pages/dashboard/Dashboard";
 import Cadastro from "../pages/inicio/Cadastro";
 import Landing from "../pages/inicio/Landing";
 import Login from "../pages/inicio/Login";
+import EntrarEquipe from "../pages/inicio/EntrarEquipe";
+import Privacidade from "../pages/inicio/Privacidade";
 import Vendas from "../pages/vendas/Vendas";
 import NotFound from "../pages/NotFound";
 import Pdv from "../pages/pdv/Pdv";
@@ -27,6 +30,9 @@ export const router = createBrowserRouter([
   { path: "/", element: <Landing /> },
   { path: "/login", element: <Login /> },
   { path: "/cadastro", element: <Cadastro /> },
+  { path: "/privacidade", element: <Privacidade /> },
+  // Login da equipe da loja: fora do MainLayout, que só abre com a sessão da equipe (EquipeProvider).
+  { path: "/admin/entrar", element: <EntrarEquipe /> },
   // Área do cliente (login por CPF + senha em /login e /cadastro): a loja (/loja, tela inicial depois do
   // login) e a "Minha conta". Mesmo visual do MainLayout, com as rotas do cliente na sidebar.
   {
@@ -60,6 +66,7 @@ export const router = createBrowserRouter([
           { path: "vendas", element: <Vendas /> },
           { path: "acoes", element: <Actions /> },
           { path: "avaliacoes", element: <AvaliacoesLoja /> },
+          { path: "estoque", element: <Estoque /> },
           { path: "*", element: <NotFound /> },
         ],
       },

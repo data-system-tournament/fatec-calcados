@@ -1,16 +1,34 @@
 import json
+from functools import wraps
 from datetime import date
 
 from django.contrib.auth import logout, update_session_auth_hash
 from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from . import cpf as cpf_utils
 from . import acoes, consultas, indicadores, regras, services
 from .models import Caixa, Cliente, Compra
+
+
+def _erro(mensagem, status=400):
+    return JsonResponse({"erro": mensagem}, status=status)
+
+
+# Feito com IA: as rotas da loja (PDV e gestão) só respondem para a equipe logada (is_staff); sem isso, 401,
+# e o front manda para /admin/entrar. Usam o cookie de sessão, então NÃO são csrf_exempt: o front devolve
+# o cookie `csrftoken` (enviado pelo GET /api/equipe/) no cabeçalho X-CSRFToken, como na área do cliente.
+# O catálogo (/api/produtos/) fica aberto porque a loja online também usa.
+def _so_equipe(view):
+    @wraps(view)
+    def protegida(request, *args, **kwargs):
+        if not (request.user.is_authenticated and request.user.is_staff):
+            return _erro("Entre com um usuário da equipe da loja.", status=401)
+        return view(request, *args, **kwargs)
+    return protegida
 
 
 ATALHOS = [("30 dias", 30), ("90 dias", 90), ("12 meses", 365)]
@@ -53,6 +71,7 @@ def _dados_dashboard(request):
 
 
 @require_GET
+@_so_equipe
 def api_dashboard(request):
     dados = _dados_dashboard(request)
     pontos = dados["pontos"]
@@ -65,12 +84,9 @@ def api_dashboard(request):
 
 
 @require_GET
+@_so_equipe
 def api_acoes(request):
     return JsonResponse({"acoes": acoes.acoes_do_dia()})
-
-
-def _erro(mensagem, status=400):
-    return JsonResponse({"erro": mensagem}, status=status)
 
 
 def _ler_json(request):
@@ -130,13 +146,14 @@ def api_produtos(request):
     produtos = services.buscar_produtos(request.GET.get("busca", ""))
     return JsonResponse({
         "produtos": [
-            {"sku": p.sku, "nome": p.nome, "preco": float(p.preco)}
+            {"sku": p.sku, "nome": p.nome, "preco": float(p.preco), "foto": p.foto}
             for p in produtos
         ]
     })
 
 
 @require_GET
+@_so_equipe
 def api_cliente(request, cpf):
     cliente = Cliente.objects.filter(cpf=cpf_utils.limpar(cpf)).first()
     if cliente is None:
@@ -149,6 +166,7 @@ def _pagina(request):
 
 
 @require_GET
+@_so_equipe
 def api_cliente_perfil(request, cliente_id):
     cliente = Cliente.objects.select_related("loja_cadastro").filter(id=cliente_id).first()
     if cliente is None:
@@ -156,8 +174,8 @@ def api_cliente_perfil(request, cliente_id):
     return JsonResponse(consultas.perfil_do_cliente(cliente))
 
 
-@csrf_exempt
 @require_http_methods(["GET", "POST"])
+@_so_equipe
 def api_clientes(request):
     if request.method == "GET":
         return JsonResponse(consultas.listar_clientes(
@@ -187,6 +205,7 @@ def _data_opcional(texto):
 
 
 @require_GET
+@_so_equipe
 def api_venda_detalhe(request, compra_id):
     compra = Compra.objects.select_related("cliente", "loja", "caixa").filter(id=compra_id).first()
     if compra is None:
@@ -194,8 +213,8 @@ def api_venda_detalhe(request, compra_id):
     return JsonResponse(consultas.detalhe_da_venda(compra))
 
 
-@csrf_exempt
 @require_http_methods(["GET", "POST"])
+@_so_equipe
 def api_vendas(request):
     if request.method == "GET":
         return JsonResponse(consultas.listar_vendas(
@@ -240,7 +259,7 @@ def _resposta_da_venda(compra):
 
 
 # ---------- Área do cliente (/api/conta/) ----------
-# Diferente das rotas da loja, estas usam o cookie de sessão do Django e por isso NÃO são csrf_exempt:
+# Como as rotas da loja, estas usam o cookie de sessão do Django e por isso NÃO são csrf_exempt:
 # o front lê o cookie `csrftoken` (enviado pelo GET /api/conta/) e o devolve no cabeçalho X-CSRFToken.
 
 def _cliente_logado(request):
@@ -336,6 +355,21 @@ def api_conta_senha(request):
     return JsonResponse({})
 
 
+# POST {senha}: exclui a conta do cliente logado (LGPD) e encerra a sessão.
+@require_POST
+def api_conta_excluir(request):
+    cliente = _cliente_logado(request)
+    if cliente is None:
+        return _sem_sessao()
+    try:
+        dados = _ler_json(request)
+        services.excluir_conta(cliente, dados.get("senha"))
+    except services.RegraViolada as e:
+        return _erro(str(e))
+    logout(request)
+    return JsonResponse({})
+
+
 # POST {numeracao, nascimento: "AAAA-MM-DD", aceita_contato}: dados que o cliente completa no perfil.
 # Numeração e nascimento vazios (null ou "") apagam o que havia. Responde com o painel atualizado.
 @require_POST
@@ -381,9 +415,66 @@ def api_conta_avaliacoes(request):
 
 # Avaliações dos clientes para o gerente: resumo, nota por produto e a lista (filtros ?produto=&nota=).
 @require_GET
+@_so_equipe
 def api_avaliacoes(request):
     return JsonResponse(consultas.avaliacoes_da_loja(
         produto=request.GET.get("produto", ""),
         nota=request.GET.get("nota", ""),
         pagina=_pagina(request),
     ))
+
+
+# Estoque para o gerente: produtos com a situação (esgotado, acabando, ok) e o filtro ?situacao=.
+@require_GET
+@_so_equipe
+def api_estoque(request):
+    return JsonResponse(consultas.estoque_da_loja(situacao=request.GET.get("situacao", "")))
+
+
+# POST {quantidade, minimo}: grava a contagem do produto e responde com ele e a situação nova.
+@require_POST
+@_so_equipe
+def api_estoque_produto(request, sku):
+    try:
+        dados = _ler_json(request)
+        produto = services.ajustar_estoque(sku, dados.get("quantidade"), dados.get("minimo"))
+    except services.RegraViolada as e:
+        return _erro(str(e))
+    return JsonResponse({
+        "sku": produto.sku,
+        "estoque": produto.estoque,
+        "minimo": produto.estoque_minimo,
+        "situacao": regras.situacao_do_estoque(produto.estoque, produto.estoque_minimo),
+    })
+
+
+# ---------- Equipe da loja (/api/equipe/) ----------
+# Login da área /admin: usuário + senha de um User da equipe (criado com `manage.py criar_admin`).
+
+def _equipe_json(user):
+    return {"usuario": user.username, "nome": user.get_full_name() or user.username}
+
+
+# Quem está logado, ou 401. Também é esta chamada que manda o cookie csrftoken para os POST da loja.
+@ensure_csrf_cookie
+@require_GET
+def api_equipe(request):
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return _erro("Entre com um usuário da equipe da loja.", status=401)
+    return JsonResponse(_equipe_json(request.user))
+
+
+@require_POST
+def api_equipe_entrar(request):
+    try:
+        dados = _ler_json(request)
+        user = services.autenticar_equipe(request, dados.get("usuario"), dados.get("senha"))
+    except services.RegraViolada as e:
+        return _erro(str(e))
+    return JsonResponse(_equipe_json(user))
+
+
+@require_POST
+def api_equipe_sair(request):
+    logout(request)
+    return JsonResponse({})

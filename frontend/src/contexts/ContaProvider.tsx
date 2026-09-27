@@ -56,6 +56,13 @@ export function ContaProvider({ children }: { children: ReactNode }) {
     await apiSignOut().catch(() => {});
     setAccount(null);
     setCart([]);
+    // Apaga o carrinho salvo aqui mesmo: quem sai pode estar indo para outra página, e o efeito que salva
+    // o carrinho não roda mais depois que o provider desmonta.
+    try {
+      localStorage.removeItem(CART_KEY);
+    } catch {
+      // sem localStorage: nada salvo
+    }
   }, []);
 
   function addToCart(product: Product) {

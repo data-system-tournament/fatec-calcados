@@ -48,6 +48,12 @@ class Produto(models.Model):
     nome = models.CharField(max_length=120)
     preco = models.DecimalField("preço", max_digits=10, decimal_places=2)
     ativo = models.BooleanField(default=True, help_text="Produtos inativos não aparecem no caixa")
+    foto = models.URLField(blank=True, help_text="Endereço da foto do produto. Vazio = a loja mostra o ícone da categoria")
+    # Cada venda tira do estoque (services.registrar_venda); o gerente acerta a contagem na tela Estoque.
+    estoque = models.PositiveIntegerField(default=0)
+    estoque_minimo = models.PositiveIntegerField(
+        "estoque mínimo", default=regras.ESTOQUE_MINIMO_PADRAO, help_text="No mínimo ou abaixo, o produto está acabando"
+    )
 
     class Meta:
         ordering = ["nome"]
@@ -71,6 +77,9 @@ class Cliente(models.Model):
     nascimento = models.DateField("data de nascimento", null=True, blank=True)
     # LGPD: quando o cliente autorizou receber ofertas. Vazio = não autorizou (ou desistiu).
     contato_autorizado_em = models.DateTimeField(null=True, blank=True)
+    # LGPD: quando o cliente excluiu a conta. Os dados pessoais já foram apagados (services.excluir_conta);
+    # o registro fica só porque as vendas e o livro-razão de pontos apontam para ele.
+    excluido_em = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["nome"]

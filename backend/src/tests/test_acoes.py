@@ -5,12 +5,14 @@ from django.utils import timezone
 
 from src import acoes, services
 from src.models import Loja
+from src.tests.apoio import entrar_como_equipe
 
 CPFS = ["52998224725", "39053344705", "11144477735", "86288366757", "71428793860"]
 
 
 class AcoesTest(TestCase):
     def setUp(self):
+        entrar_como_equipe(self.client)
         self.agora = timezone.now()
         self.loja = Loja.objects.create(nome="Loja Centro", cidade="Araras")
 

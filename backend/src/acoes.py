@@ -21,7 +21,8 @@ def _cliente(cliente, detalhe):
 def clientes_sumindo(ref):
     limite = ref - timedelta(days=DIAS_PARA_SUMIDO)
     clientes = (
-        Cliente.objects.annotate(ultima=Max("compras__data"))
+        Cliente.objects.filter(excluido_em__isnull=True)
+        .annotate(ultima=Max("compras__data"))
         .filter(ultima__lt=limite)
         .order_by("-ultima")
     )
@@ -64,7 +65,7 @@ def perto_de_subir(ref):
 def novos_sem_segunda_compra(ref):
     limite = ref - timedelta(days=DIAS_PARA_SEGUNDA_COMPRA)
     clientes = (
-        Cliente.objects.filter(cadastrado_em__lt=limite)
+        Cliente.objects.filter(cadastrado_em__lt=limite, excluido_em__isnull=True)
         .annotate(compras_feitas=Count("compras"))
         .filter(compras_feitas=1)
         .order_by("-cadastrado_em")

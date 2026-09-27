@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from src import services
 from src.models import Caixa, Cliente, Loja, MovimentoPontos, Produto
+from src.tests.apoio import entrar_como_equipe
 
 ANA, BRUNO, CARLA = "52998224725", "39053344705", "11144477735"
 
@@ -15,6 +16,7 @@ class ConsultasTest(TestCase):
     """Telas de Clientes e Vendas: listas, filtros, perfil e detalhe (só leitura)."""
 
     def setUp(self):
+        entrar_como_equipe(self.client)
         self.agora = timezone.now()
         loja = Loja.objects.create(nome="Loja Centro", cidade="Araras")
         self.caixa1 = Caixa.objects.create(codigo="centro-01", nome="Caixa 01", loja=loja)

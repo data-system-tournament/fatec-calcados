@@ -6,12 +6,16 @@ from django.utils import timezone
 
 from src import indicadores, regras
 from src.models import Cliente, Compra, MovimentoPontos
+from src.tests.apoio import entrar_como_equipe
 
 
 class SeedEDashboardTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         call_command("popular_dados", clientes=25, compras=220, semente=7, verbosity=0)
+
+    def setUp(self):
+        entrar_como_equipe(self.client)
 
     def test_seed_respeita_o_minimo_do_desafio(self):
         self.assertGreaterEqual(Cliente.objects.count(), 20)

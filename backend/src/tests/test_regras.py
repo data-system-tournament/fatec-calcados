@@ -76,6 +76,21 @@ class RegrasPurasTest(TestCase):
         for nascimento in (date(2026, 9, 27), date(1905, 1, 1)):
             self.assertIn("nascimento", regras.problema_do_perfil(40, nascimento, hoje))
 
+    def test_estoque_zerado_esgotado_ate_o_minimo_acabando(self):
+        self.assertEqual(regras.situacao_do_estoque(0, 5), regras.ESGOTADO)
+        self.assertEqual(regras.situacao_do_estoque(1, 5), regras.ACABANDO)
+        self.assertEqual(regras.situacao_do_estoque(5, 5), regras.ACABANDO)
+        self.assertEqual(regras.situacao_do_estoque(6, 5), regras.EM_DIA)
+        self.assertEqual(regras.situacao_do_estoque(1, 0), regras.EM_DIA)
+
+    def test_contagem_de_estoque_aceita_so_inteiros_de_zero_para_cima(self):
+        self.assertIsNone(regras.problema_do_estoque(0, 0))
+        self.assertIsNone(regras.problema_do_estoque(40, 5))
+        for quantidade in (-1, 2.5, True, "3", None):
+            self.assertIn("quantidade", regras.problema_do_estoque(quantidade, 5))
+        for minimo in (-1, 2.5, False, None):
+            self.assertIn("mínimo", regras.problema_do_estoque(10, minimo))
+
 
 class CpfTest(TestCase):
     def test_cpf_valido_e_invalido(self):

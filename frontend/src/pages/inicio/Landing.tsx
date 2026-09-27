@@ -77,7 +77,12 @@ export default function Landing() {
             <Logo tamanho="size-8" />
             FATECalçados
           </span>
-          <span>Desafio de Inovação Data System 2026 · Fotos: Unsplash</span>
+          <span>
+            Desafio de Inovação Data System 2026 · Fotos: Unsplash ·{" "}
+            <Link to="/privacidade" className="underline underline-offset-4 hover:text-white">
+              Política de Privacidade
+            </Link>
+          </span>
         </div>
       </footer>
     </div>

@@ -48,6 +48,11 @@ export function passosDoTour(): PassoTour[] {
       texto: "O que os clientes acharam dos produtos: nota média, nota por produto e os comentários. Clique num produto para ler só os dele.",
     },
     {
+      alvo: "/admin/estoque",
+      titulo: "Estoque",
+      texto: "Quanto sobra de cada produto: cada venda já tira do estoque. Esgotados e os que estão acabando aparecem primeiro; use Ajustar ao receber mercadoria ou contar a prateleira.",
+    },
+    {
       alvo: "conexao",
       titulo: "Status do caixa",
       texto: "Mostra se este caixa está conectado. Offline, as vendas continuam sendo registradas e ficam pendentes até a conexão voltar.",

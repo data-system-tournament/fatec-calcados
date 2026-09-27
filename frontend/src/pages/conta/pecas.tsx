@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import type { ReactNode } from "react";
+import { createElement, useState, type ReactNode } from "react";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { corDoNivel } from "../../components/ui/corDoNivel";
@@ -8,6 +8,7 @@ import { useToast } from "../../contexts/toast";
 import type { ClientDashboard } from "../../types";
 import { formatMoney, formatNumber } from "../../utils/format";
 import { TONS, type Tom } from "../dashboard/tons";
+import { iconeDoProduto } from "../pdv/categorias";
 
 // Peças usadas em mais de uma tela da área do cliente (Produtos e Meu perfil).
 
@@ -89,4 +90,16 @@ export function CompreDeNovo({ account }: { account: ClientDashboard }) {
       ))}
     </ul>
   );
+}
+
+// Feito com IA: foto do produto (cards da loja e avaliações). Sem foto cadastrada, ou se ela não carregar
+// (sem internet, link quebrado), mostra o ícone da categoria no fundo --foto, como antes. O alt fica vazio
+// porque o nome do produto já está escrito ao lado; a foto é só ilustração.
+export function FotoDoProduto({ nome, foto, tamanhoIcone }: { nome: string; foto: string | null; tamanhoIcone: number }) {
+  const [falhou, setFalhou] = useState(false);
+  if (foto && !falhou) {
+    return <img src={foto} alt="" loading="lazy" decoding="async" onError={() => setFalhou(true)} className="size-full object-cover" />;
+  }
+  // createElement: o ícone é um componente fixo do lucide escolhido pela categoria, não criado aqui.
+  return createElement(iconeDoProduto(nome), { size: tamanhoIcone, strokeWidth: 1.3, className: "text-faint", "aria-hidden": true });
 }

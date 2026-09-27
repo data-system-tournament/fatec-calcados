@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { REGISTER_CODE } from "../config";
 import {
-  buyOnline, fetchAccount, fetchReviews, fetchStoreReviews, fetchActions, fetchClient, fetchClientProfile, fetchClients, fetchDashboard,
-  fetchProducts, fetchSaleDetail, fetchSales, registerClient, sendReview, sendSale, signIn, updateProfile,
+  buyOnline, deleteAccount, fetchAccount, fetchReviews, fetchStoreReviews, fetchActions, fetchClient, fetchClientProfile, fetchClients, fetchDashboard,
+  fetchProducts, fetchSaleDetail, fetchSales, fetchStaff, fetchStock, registerClient, sendReview, sendSale, signIn,
+  staffSignIn, staffSignOut, updateProfile, updateStock,
 } from "../services/api";
 import type { Sale } from "../types";
 import { chamada, simularApi } from "./apiFalsa";
@@ -11,6 +12,7 @@ import { avaliacoesDaLojaApi } from "./dados/avaliacoes";
 import { clientePdvApi, listaDeClientesApi, perfilDoClienteApi } from "./dados/clientes";
 import { avaliacoesApi, painelDoClienteApi } from "./dados/conta";
 import { dashboardApi } from "./dados/dashboard";
+import { estoqueApi } from "./dados/estoque";
 import { produtosApi } from "./dados/produtos";
 import { detalheDaVendaApi, listaDeVendasApi } from "./dados/vendas";
 
@@ -47,8 +49,8 @@ describe("produtos e ações", () => {
   it("converte os produtos", async () => {
     simularApi([{ corpo: produtosApi }]);
     expect(await fetchProducts()).toEqual([
-      { sku: "TEN-001", name: "Tênis Corrida Leve", price: 459.7 },
-      { sku: "MEI-002", name: "Meia Esportiva", price: 39.95 },
+      { sku: "TEN-001", name: "Tênis Corrida Leve", price: 459.7, photo: "https://images.unsplash.com/photo-1?w=600" },
+      { sku: "MEI-002", name: "Meia Esportiva", price: 39.95, photo: null },
     ]);
   });
 
@@ -203,6 +205,7 @@ describe("área do cliente", () => {
     simularApi([{ corpo: painelDoClienteApi }]);
     const painel = await fetchAccount();
     expect(painel).toMatchObject({ name: "Ana Souza", points: 1270, levelProgress: 32, savings: 50 });
+    expect(painel?.topProducts).toEqual([{ sku: "TEN-001", name: "Tênis Corrida Leve", price: 459.7, photo: "https://images.unsplash.com/photo-1?w=600", units: 1 }]);
     expect(painel?.expiring).toEqual({ days: 60, points: 713, nextDate: "2026-11-02" });
     expect(painel?.pendingReviews).toEqual({ count: 1, points: 20, lastPurchase: "2026-09-20T15:10:00-03:00" });
     expect(painel).toMatchObject({ shoeSize: 37, birthDate: "1992-10-14", contactConsentAt: "2026-09-01T18:30:00-03:00" });
@@ -247,9 +250,9 @@ describe("avaliações", () => {
     const avaliacoes = await fetchReviews();
     expect(avaliacoes).toMatchObject({ pointsPerReview: 20, minComment: 20 });
     expect(avaliacoes.pending).toEqual([
-      { sku: "MEI-002", name: "Meia Esportiva", price: 39.95, lastPurchase: "2026-09-20T15:10:00-03:00" },
+      { sku: "MEI-002", name: "Meia Esportiva", price: 39.95, photo: null, lastPurchase: "2026-09-20T15:10:00-03:00" },
     ]);
-    expect(avaliacoes.done[0]).toMatchObject({ name: "Tênis Corrida Leve", rating: 5, points: 20 });
+    expect(avaliacoes.done[0]).toMatchObject({ name: "Tênis Corrida Leve", photo: "https://images.unsplash.com/photo-1?w=600", rating: 5, points: 20 });
   });
 
   it("envia SKU, nota e comentário com os nomes da API", async () => {
@@ -277,5 +280,87 @@ describe("avaliações na área da loja", () => {
     expect(dados.byRating[0]).toEqual({ rating: 5, count: 1 });
     expect(dados.byProduct[0]).toEqual({ sku: "TEN-001", name: "Tênis Corrida Leve", count: 2, average: 4.5 });
     expect(dados.reviews[0]).toMatchObject({ client: { id: 1, name: "Ana Souza" }, rating: 2 });
+  });
+});
+
+describe("estoque", () => {
+  it("manda o filtro de situação e converte resumo e produtos", async () => {
+    const fetch = simularApi([{ corpo: estoqueApi }]);
+    const estoque = await fetchStock("ACABANDO");
+    expect(chamada(fetch).url).toBe("/api/estoque/?situacao=ACABANDO");
+    expect(estoque.summary).toEqual({ products: 3, units: 45, outOfStock: 1, runningLow: 1 });
+    expect(estoque.soldDays).toBe(30);
+    expect(estoque.items[1]).toEqual({ sku: "MEI-002", name: "Meia Esportiva", quantity: 3, minimum: 5, status: "ACABANDO", sold: 11 });
+  });
+
+  it("sem filtro, não manda parâmetro", async () => {
+    const fetch = simularApi([{ corpo: estoqueApi }]);
+    await fetchStock();
+    expect(chamada(fetch).url).toBe("/api/estoque/");
+  });
+
+  it("acerta a contagem com quantidade e mínimo", async () => {
+    const fetch = simularApi([{ corpo: { sku: "BOT-003", estoque: 20, minimo: 4, situacao: "OK" } }]);
+    const produto = await updateStock("BOT-003", 20, 4);
+    expect(chamada(fetch)).toMatchObject({ url: "/api/estoque/BOT-003/", method: "POST", body: { quantidade: 20, minimo: 4 } });
+    expect(produto).toEqual({ sku: "BOT-003", quantity: 20, minimum: 4, status: "OK" });
+  });
+
+  it("mostra o erro do backend", async () => {
+    simularApi([{ status: 400, corpo: { erro: "Informe a quantidade em estoque (zero ou mais)." } }]);
+    await expect(updateStock("BOT-003", -1, 4)).rejects.toThrow("Informe a quantidade em estoque (zero ou mais).");
+  });
+});
+
+describe("login da equipe", () => {
+  it("devolve quem está logado", async () => {
+    const fetch = simularApi([{ corpo: { usuario: "gerente", nome: "Paula Lima" } }]);
+    expect(await fetchStaff()).toEqual({ username: "gerente", name: "Paula Lima" });
+    expect(chamada(fetch).url).toBe("/api/equipe/");
+  });
+
+  it("sem sessão (401), devolve null", async () => {
+    simularApi([{ status: 401, corpo: { erro: "Entre com um usuário da equipe da loja." } }]);
+    expect(await fetchStaff()).toBeNull();
+  });
+
+  it("outros erros continuam sendo erro", async () => {
+    simularApi([{ status: 500 }]);
+    await expect(fetchStaff()).rejects.toThrow("Erro 500 no servidor.");
+  });
+
+  it("entra com usuário e senha e o token CSRF", async () => {
+    const fetch = simularApi([{ corpo: { usuario: "gerente", nome: "Paula Lima" } }]);
+    expect(await staffSignIn("gerente", "Calcados#2026")).toEqual({ username: "gerente", name: "Paula Lima" });
+    expect(chamada(fetch)).toMatchObject({
+      url: "/api/equipe/entrar/",
+      method: "POST",
+      headers: { "X-CSRFToken": "token-de-teste" },
+      body: { usuario: "gerente", senha: "Calcados#2026" },
+    });
+  });
+
+  it("mostra o erro de senha errada", async () => {
+    simularApi([{ status: 400, corpo: { erro: "Usuário ou senha incorretos." } }]);
+    await expect(staffSignIn("gerente", "errada")).rejects.toThrow("Usuário ou senha incorretos.");
+  });
+
+  it("sai", async () => {
+    const fetch = simularApi([{ corpo: {} }]);
+    await staffSignOut();
+    expect(chamada(fetch)).toMatchObject({ url: "/api/equipe/sair/", method: "POST" });
+  });
+});
+
+describe("exclusão da conta", () => {
+  it("manda a senha para confirmar", async () => {
+    const fetch = simularApi([{ corpo: {} }]);
+    await deleteAccount("sapato-azul-2026");
+    expect(chamada(fetch)).toMatchObject({ url: "/api/conta/excluir/", method: "POST", body: { senha: "sapato-azul-2026" } });
+  });
+
+  it("senha errada vira erro com a mensagem do backend", async () => {
+    simularApi([{ status: 400, corpo: { erro: "A senha não confere." } }]);
+    await expect(deleteAccount("errada")).rejects.toThrow("A senha não confere.");
   });
 });

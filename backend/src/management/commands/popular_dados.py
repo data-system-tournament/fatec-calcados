@@ -44,6 +44,22 @@ PRODUTOS = [
     ("7890015", "Meia Esportiva (kit)", "39.90"),
     ("7890016", "Palmilha Gel", "34.90"),
 ]
+# Feito com IA: fotos dos tênis, as mesmas do Unsplash que a landing usa (frontend/src/pages/inicio/fotos.ts;
+# licença Unsplash, uso livre). Cada uma foi escolhida pelo que o nome do produto diz (branco, lona, colorido,
+# treino). Os outros produtos (botas, sandálias, meias...) ficam sem foto e a loja mostra o ícone da categoria.
+FOTOS = {
+    "7890001": "1606107557195-0e29a4b5b4aa",  # Tênis Runner: treino verde-limão
+    "7890002": "1608231387042-66d1773070a5",  # Tênis Casual Branco: casual branco de couro
+    "7890003": "1549298916-b41d501d3772",  # Tênis Skate: caramelo de lona
+    "7890004": "1560769629-975ec94e6a86",  # Tênis Infantil Luz: dois tênis coloridos
+    "7890014": "1605408499391-6368c628ef42",  # Tênis Corrida Pro: treino preto
+}
+
+
+def _url_da_foto(sku):
+    return f"https://images.unsplash.com/photo-{FOTOS[sku]}?w=600&q=80&fm=jpg&fit=max" if sku in FOTOS else ""
+
+
 PAGAMENTOS = {
     FormaPagamento.PIX: 40,
     FormaPagamento.CREDITO: 30,
@@ -89,7 +105,7 @@ class Command(BaseCommand):
             for loja in lojas
         }
         produtos = [
-            Produto.objects.create(sku=sku, nome=nome, preco=Decimal(preco))
+            Produto.objects.create(sku=sku, nome=nome, preco=Decimal(preco), foto=_url_da_foto(sku))
             for sku, nome, preco in PRODUTOS
         ]
 
@@ -167,6 +183,14 @@ class Command(BaseCommand):
 
         for cliente, *_ in clientes:
             services.expirar_pontos(cliente, agora)
+
+        # Feito com IA: contagem de hoje, feita depois das vendas (que já tiraram do estoque) e passando
+        # pelo mesmo ajuste da tela Estoque. Sai do fim do sorteio para não mudar os dados de antes;
+        # a mistura garante produtos esgotados e acabando para a tela ter o que mostrar.
+        contagens = [0, 0, 2, 3, 4] + [rng.randint(8, 60) for _ in range(len(produtos) - 5)]
+        rng.shuffle(contagens)
+        for produto, quantidade in zip(produtos, contagens):
+            services.ajustar_estoque(produto.sku, quantidade, regras.ESTOQUE_MINIMO_PADRAO)
 
         if opts["verbosity"] > 0:
             self._resumo(len(clientes), len(eventos), resgates, agora)

@@ -62,6 +62,13 @@ export default function Cadastro() {
       <Campo rotulo="Nome" name="nome" autoComplete="name" />
       <Campo rotulo="Senha" type="password" name="senha" autoComplete="new-password" placeholder="Pelo menos 8 caracteres" />
       <Campo rotulo="Confirme a senha" type="password" name="confirmacao" autoComplete="new-password" />
+      <p className="text-[13px] text-(--l-texto-2)">
+        Ao criar seu acesso, você concorda com a{" "}
+        <Link to="/privacidade" className={linkRodape}>
+          Política de Privacidade
+        </Link>
+        .
+      </p>
     </TelaAcesso>
   );
 }

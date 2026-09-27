@@ -1,13 +1,13 @@
 import { Coins, ShoppingCart } from "lucide-react";
-import { createElement } from "react";
 import { estimatePoints } from "../../regras";
 import type { Product } from "../../types";
 import { formatMoney, formatNumber } from "../../utils/format";
 import { TONS } from "../dashboard/tons";
-import { categoriaDoProduto, iconeDoProduto } from "../pdv/categorias";
+import { categoriaDoProduto } from "../pdv/categorias";
+import { FotoDoProduto } from "./pecas";
 
 // Feito com IA: card de produto da loja online, no formato das vitrines de e-commerce: a "foto" em cima
-// (por enquanto um quadrado claro com o ícone da categoria) e, embaixo, categoria, nome, preço e o botão
+// (a foto cadastrada no produto; sem ela, o ícone da categoria) e, embaixo, categoria, nome, preço e o botão
 // de carrinho. No lugar das estrelas dessas lojas vai o que o programa tem de real: quantos pontos a
 // compra rende, com o bônus do nível (mesma conta de regras.py, via estimatePoints). Não há avaliação
 // nem preço antigo no backend, então nada disso é inventado aqui.
@@ -21,9 +21,8 @@ function CardProduto({ product, quantidade, bonus, onAdd }: {
 
   return (
     <article className={`flex h-full flex-col overflow-hidden rounded-[10px] border bg-surface transition-[border-color,box-shadow] duration-150 hover:shadow-pop ${quantidade ? "border-ink" : "border-line hover:border-line-2"}`}>
-      <div className="relative grid aspect-square place-items-center border-b border-line bg-foto">
-        {/* createElement: o ícone é um componente fixo do lucide escolhido pela categoria, não criado aqui. */}
-        {createElement(iconeDoProduto(product.name), { size: 48, strokeWidth: 1.2, className: "text-faint", "aria-hidden": true })}
+      <div className="relative grid aspect-square place-items-center overflow-hidden border-b border-line bg-foto">
+        <FotoDoProduto nome={product.name} foto={product.photo} tamanhoIcone={48} />
         {quantidade > 0 && (
           <span className="absolute top-2.5 left-2.5 rounded-full bg-ink px-2 text-[11.5px] leading-5 font-semibold text-surface tabular-nums">
             {quantidade} no carrinho

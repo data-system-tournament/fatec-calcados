@@ -14,7 +14,7 @@ import { errorMessage, fetchReviews, sendReview } from "../../services/api";
 import type { PendingReview, Reviews } from "../../types";
 import { formatDay, formatNumber } from "../../utils/format";
 import { TONS } from "../dashboard/tons";
-import { iconeDoProduto } from "../pdv/categorias";
+import { FotoDoProduto } from "./pecas";
 import { EscolherNota, Estrelas } from "../../components/ui/Estrelas";
 
 type Aba = "pendentes" | "feitas";
@@ -94,7 +94,7 @@ function Pendentes({ reviews, onAvaliar }: { reviews: Reviews; onAvaliar: (produ
       {reviews.pending.map((produto) => (
         <li key={produto.sku}>
           <Card className="flex h-full items-center gap-3 p-3">
-            <FotoPequena nome={produto.name} />
+            <FotoPequena nome={produto.name} foto={produto.photo} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13.5px] font-medium">{produto.name}</span>
               <small className="text-xs text-muted">Comprado em {formatDay(produto.lastPurchase)}</small>
@@ -119,7 +119,7 @@ function Feitas({ reviews }: { reviews: Reviews }) {
       {reviews.done.map((avaliacao) => (
         <li key={avaliacao.sku}>
           <Card className="flex gap-3 p-[18px]">
-            <FotoPequena nome={avaliacao.name} />
+            <FotoPequena nome={avaliacao.name} foto={avaliacao.photo} />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <span className="text-[13.5px] font-medium">{avaliacao.name}</span>
@@ -208,10 +208,10 @@ function ModalAvaliar({ produto, reviews, onClose, onEnviada }: {
   );
 }
 
-function FotoPequena({ nome }: { nome: string }) {
+function FotoPequena({ nome, foto }: { nome: string; foto: string | null }) {
   return (
-    <span className="grid size-14 flex-none place-items-center rounded-lg border border-line bg-foto" aria-hidden>
-      {createElement(iconeDoProduto(nome), { size: 24, strokeWidth: 1.4, className: "text-faint" })}
+    <span className="grid size-14 flex-none place-items-center overflow-hidden rounded-lg border border-line bg-foto" aria-hidden>
+      <FotoDoProduto nome={nome} foto={foto} tamanhoIcone={24} />
     </span>
   );
 }

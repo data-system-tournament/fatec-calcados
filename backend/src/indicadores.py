@@ -26,9 +26,10 @@ def periodo_de_datas(data_inicio, data_fim):
 
 
 # Feito com IA: soma, para cada cliente, os pontos acumulados nos 12 meses até `ref`
-# (Sum com filter numa única consulta, em vez de uma consulta por cliente).
+# (Sum com filter numa única consulta, em vez de uma consulta por cliente). Contas excluídas ficam de fora:
+# esta é a base das listas de clientes, do ranking, dos níveis e das ações.
 def pontos_12m_por_cliente(ref):
-    return Cliente.objects.filter(cadastrado_em__lte=ref).annotate(
+    return Cliente.objects.filter(cadastrado_em__lte=ref, excluido_em__isnull=True).annotate(
         p12=Coalesce(
             Sum(
                 "movimentos__pontos",

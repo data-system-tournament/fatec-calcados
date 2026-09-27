@@ -4,6 +4,8 @@ export type Product = {
   sku: string;
   name: string;
   price: number;
+  // Endereço da foto; null quando o produto não tem (a loja mostra o ícone da categoria).
+  photo: string | null;
 };
 
 export type Client = {
@@ -243,8 +245,8 @@ export type OnlinePurchaseResult = {
 };
 
 // Avaliações do cliente (Minha conta › Avaliações). As regras vêm da API (regras.py), não copiadas aqui.
-export type PendingReview = { sku: string; name: string; price: number; lastPurchase: string };
-export type Review = { sku: string; name: string; rating: number; comment: string; date: string; points: number };
+export type PendingReview = { sku: string; name: string; price: number; photo: string | null; lastPurchase: string };
+export type Review = { sku: string; name: string; photo: string | null; rating: number; comment: string; date: string; points: number };
 export type Reviews = {
   pointsPerReview: number;
   minComment: number;
@@ -271,3 +273,15 @@ export type StoreReviews = {
   byProduct: { sku: string; name: string; count: number; average: number }[];
   reviews: StoreReview[];
 };
+
+// Estoque (tela Estoque do gerente). A situação vem pronta do backend (regras.situacao_do_estoque).
+export type StockStatus = "ESGOTADO" | "ACABANDO" | "OK";
+export type StockItem = { sku: string; name: string; quantity: number; minimum: number; status: StockStatus; sold: number };
+export type Stock = {
+  summary: { products: number; units: number; outOfStock: number; runningLow: number };
+  soldDays: number;
+  items: StockItem[];
+};
+
+// Usuário da equipe logado na área /admin.
+export type StaffUser = { username: string; name: string };

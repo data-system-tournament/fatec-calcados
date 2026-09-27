@@ -7,10 +7,12 @@ from django.utils import timezone
 
 from src import services
 from src.models import Caixa, Compra, Loja, Produto
+from src.tests.apoio import entrar_como_equipe
 
 
 class PdvTest(TestCase):
     def setUp(self):
+        entrar_como_equipe(self.client)
         loja = Loja.objects.create(nome="Loja Centro", cidade="Araras")
         self.caixa = Caixa.objects.create(codigo="centro-01", nome="Caixa 01", loja=loja)
         Produto.objects.create(sku="7890001", nome="Tênis Runner", preco=Decimal("289.90"))
@@ -35,6 +37,12 @@ class PdvTest(TestCase):
         produtos = self.client.get("/api/produtos/").json()["produtos"]
         self.assertEqual([p["sku"] for p in produtos], ["7890002", "7890001"])
         self.assertEqual(produtos[1]["preco"], 289.90)
+
+    def test_catalogo_manda_a_foto_ou_vazio(self):
+        Produto.objects.filter(sku="7890001").update(foto="https://images.unsplash.com/photo-1?w=600")
+        produtos = {p["sku"]: p for p in self.client.get("/api/produtos/").json()["produtos"]}
+        self.assertEqual(produtos["7890001"]["foto"], "https://images.unsplash.com/photo-1?w=600")
+        self.assertEqual(produtos["7890002"]["foto"], "")
 
     def test_busca_por_nome_ou_codigo(self):
         por_nome = self.client.get("/api/produtos/", {"busca": "tênis"}).json()["produtos"]

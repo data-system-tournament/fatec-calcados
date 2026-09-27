@@ -97,3 +97,38 @@ def problema_do_perfil(numeracao, nascimento, hoje) -> str | None:
     if nascimento is not None and (nascimento > hoje or nascimento.year < hoje.year - IDADE_MAXIMA):
         return "Confira a data de nascimento."
     return None
+
+
+# Feito com IA: estoque simples, um número por produto (sem separar por loja nem por numeração). O gerente
+# define o mínimo de cada produto; no mínimo ou abaixo dele o produto está acabando e precisa de reposição.
+ESGOTADO, ACABANDO, EM_DIA = "ESGOTADO", "ACABANDO", "OK"
+SITUACOES_DO_ESTOQUE = (ESGOTADO, ACABANDO, EM_DIA)
+ESTOQUE_MINIMO_PADRAO = 5
+
+
+def situacao_do_estoque(quantidade: int, minimo: int) -> str:
+    if quantidade <= 0:
+        return ESGOTADO
+    if quantidade <= minimo:
+        return ACABANDO
+    return EM_DIA
+
+
+# Devolve o motivo de a contagem não valer, ou None. `type(...) is int` recusa True/False e 4.5.
+def problema_do_estoque(quantidade, minimo) -> str | None:
+    if type(quantidade) is not int or quantidade < 0:
+        return "Informe a quantidade em estoque (zero ou mais)."
+    if type(minimo) is not int or minimo < 0:
+        return "Informe o estoque mínimo (zero ou mais)."
+    return None
+
+
+# Feito com IA: exclusão de conta (LGPD). O cadastro não pode ser apagado de verdade, porque as vendas
+# (que a loja precisa guardar) e o livro-razão de pontos apontam para ele; então os dados pessoais são
+# trocados por estes. O "CPF" começa com X: nunca coincide com um CPF de verdade (só números), então a
+# pessoa pode se cadastrar de novo, do zero, se quiser.
+NOME_DE_CONTA_EXCLUIDA = "Cliente excluído"
+
+
+def cpf_de_conta_excluida(cliente_id: int) -> str:
+    return f"X{cliente_id:010d}"

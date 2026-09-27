@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createAccess, errorMessage } from "../../services/api";
 import { formatCpf, isValidCpf } from "../../utils/cpf";
+import { FUNDO_SECRETO } from "./fotos";
 import { Campo, linkRodape, TelaAcesso } from "./TelaAcesso";
 
 // Primeiro acesso do cliente. Quem já compra na loja (CPF cadastrado no caixa) informa o mesmo nome
@@ -18,15 +19,11 @@ export default function Cadastro() {
       setErro("CPF inválido. Confira os números.");
       return;
     }
-    if (senha !== dados.get("confirmacao")) {
-      setErro("As senhas não são iguais.");
-      return;
-    }
     setEnviando(true);
     setErro("");
     try {
-      await createAccess(cpf, String(dados.get("nome") ?? ""), senha);
-      navigate("/loja");
+      const conta = await createAccess(cpf, String(dados.get("nome") ?? ""), senha);
+      navigate("/loja", { state: { conta } });
     } catch (e) {
       setErro(errorMessage(e));
       setEnviando(false);
@@ -39,6 +36,7 @@ export default function Cadastro() {
       subtitulo="Já compra com a gente? Use o mesmo CPF e nome do cadastro da loja para ver seus pontos."
       botao="Criar acesso"
       onSubmit={criar}
+      fundoSecreto={FUNDO_SECRETO}
       erro={erro}
       enviando={enviando}
       rodape={
@@ -61,7 +59,6 @@ export default function Cadastro() {
       />
       <Campo rotulo="Nome" name="nome" autoComplete="name" />
       <Campo rotulo="Senha" type="password" name="senha" autoComplete="new-password" placeholder="Pelo menos 8 caracteres" />
-      <Campo rotulo="Confirme a senha" type="password" name="confirmacao" autoComplete="new-password" />
       <p className="text-[13px] text-(--l-texto-2)">
         Ao criar seu acesso, você concorda com a{" "}
         <Link to="/privacidade" className={linkRodape}>

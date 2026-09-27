@@ -6,12 +6,13 @@ import { useConta } from "../../contexts/conta";
 import { useToast } from "../../contexts/toast";
 import { useCarrinhoOnline } from "../../hooks/useCarrinhoOnline";
 import type { Product } from "../../types";
+import { unidadesPorProduto } from "../../utils/carrinho";
 import { formatMoney, formatNumber, normalizeText, plural } from "../../utils/format";
 import ProductGrid from "../pdv/ProductGrid";
 import { CompreDeNovo } from "./pecas";
 
 // Tela inicial do cliente (como a home das lojas online): faixa com os pontos, "compre de novo" e a vitrine,
-// com o mesmo catálogo do PDV em cards de vitrine (CardProduto). O botão do card soma uma unidade ao carrinho.
+// com o mesmo catálogo do PDV em cards de vitrine (CardProduto). Cada card abre a página do produto.
 function Loja() {
   const { account, products, cart, addToCart } = useConta();
   const { itemCount, subtotal } = useCarrinhoOnline(0);
@@ -21,11 +22,11 @@ function Loja() {
   const termo = normalizeText(busca.trim());
   const visiveis = termo ? products.filter((p) => normalizeText(p.name).includes(termo) || p.sku.startsWith(termo)) : products;
 
-  const quantidades: Record<string, number> = {};
-  for (const item of cart) quantidades[item.sku] = item.quantity;
+  const quantidades = unidadesPorProduto(cart);
 
+  // Só o acessório chega aqui: o card do calçado leva à página do produto, onde se escolhe o número.
   function adicionar(product: Product) {
-    addToCart(product);
+    addToCart(product.sku, null);
     notify(`${product.name} no carrinho`);
   }
 
@@ -73,7 +74,14 @@ function Loja() {
       {termo && visiveis.length === 0 ? (
         <p className="py-12 text-center text-muted">Nenhum produto encontrado para “{busca}”.</p>
       ) : (
-        <ProductGrid products={visiveis} quantidades={quantidades} onAdd={adicionar} variante="loja" bonus={account?.bonusPercent ?? 0} />
+        <ProductGrid
+          products={visiveis}
+          quantidades={quantidades}
+          onAdd={adicionar}
+          variante="loja"
+          bonus={account?.bonusPercent ?? 0}
+          numeroDoCliente={account?.shoeSize ?? null}
+        />
       )}
 
       {itemCount > 0 && (

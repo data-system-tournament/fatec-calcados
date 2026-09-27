@@ -16,8 +16,8 @@ export const detalheDaVendaApi: ApiSaleDetail = {
   loja: "Araras",
   nivel_na_compra_nome: "Prata",
   itens: [
-    { sku: "TEN-001", nome: "Tênis Corrida Leve", quantidade: 1, preco_unitario: 459.7, subtotal: 459.7 },
-    { sku: "MEI-002", nome: "Meia Esportiva", quantidade: 2, preco_unitario: 39.95, subtotal: 79.9 },
+    { sku: "TEN-001", nome: "Tênis Corrida Leve", quantidade: 1, numeracao: 40, preco_unitario: 459.7, subtotal: 459.7 },
+    { sku: "MEI-002", nome: "Meia Esportiva", quantidade: 2, numeracao: null, preco_unitario: 39.95, subtotal: 79.9 },
   ],
 };
 

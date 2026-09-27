@@ -30,6 +30,10 @@ export const TENIS: Tenis[] = [
   { id: "1605408499391-6368c628ef42", alt: "Tênis de treino preto com sola caramelo", estilo: "Academia", preco: 449.9, fundo: "#ecbce8", tinta: "escura", foco: "50% 64%" },
 ];
 
+// Fundo secreto de /login e /cadastro (InkReveal): tênis amontoados no chão, junto a uma parede de concreto.
+// Fica em public/ como JPEG (~350 KB); a imagem original era um PNG de ~3 MB.
+export const FUNDO_SECRETO = "/fundo-tenis.jpg";
+
 export const GALERIA: { id: string; alt: string }[] = [
   { id: "1514989940723-e8e51635b782", alt: "Pessoa de calça jeans com tênis laranja e branco na calçada" },
   { id: "1552346154-21d32810aba3", alt: "Par de tênis vermelho e preto de cano alto numa quadra" },

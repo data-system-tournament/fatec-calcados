@@ -5,7 +5,8 @@ import { useToast } from "../../contexts/toast";
 import { useAtalhosPdv } from "../../hooks/useAtalhosPdv";
 import { useCarrinho } from "../../hooks/useCarrinho";
 import { errorMessage } from "../../services/api";
-import type { Client, Sale } from "../../types";
+import type { Client, Product, Sale } from "../../types";
+import { unidadesPorProduto } from "../../utils/carrinho";
 import { plural } from "../../utils/format";
 import Cart from "./Cart";
 import ClientPanel from "./ClientPanel";
@@ -16,6 +17,7 @@ import ProductGrid from "./ProductGrid";
 import ProductSearch from "./ProductSearch";
 import SaleDoneModal from "./SaleDoneModal";
 import SaleTotals from "./SaleTotals";
+import SeletorNumeracao from "./SeletorNumeracao";
 
 function Pdv() {
   const {
@@ -24,8 +26,10 @@ function Pdv() {
   } = useCaixa();
   const notify = useToast();
   const carrinho = useCarrinho();
-  const { hasItems, client, paymentMethod, items, selectedSku, setSelectedSku, pointsUsed, points } = carrinho;
+  const { hasItems, client, paymentMethod, items, selectedKey, setSelectedKey, pointsUsed, points } = carrinho;
   const [lastSale, setLastSale] = useState<Sale | null>(null);
+  // Calçado esperando o atendente escolher a numeração (SeletorNumeracao).
+  const [escolhendoNumero, setEscolhendoNumero] = useState<Product | null>(null);
   const [sending, setSending] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,12 +42,18 @@ function Pdv() {
       // Limpa a venda já registrada na hora: se o atendente trocar de aba antes de fechar o
       // recibo, o carrinho vendido não pode voltar preenchido.
       resetSale();
-      setSelectedSku(null);
+      setSelectedKey(null);
       setLastSale(recorded);
     } catch (error) {
       notify(errorMessage(error));
     }
     setSending(false);
+  }
+
+  // Calçado pede a numeração antes de entrar no carrinho; acessório entra direto.
+  function adicionar(product: Product) {
+    if (product.usesSizes) setEscolhendoNumero(product);
+    else carrinho.addProduct(product, null);
   }
 
   function startNewSale() {
@@ -59,7 +69,7 @@ function Pdv() {
   useAtalhosPdv({ onSearch: () => searchInputRef.current?.focus(), onFinish: finishSale });
 
   const itemCount = items.reduce((soma, item) => soma + item.quantity, 0);
-  const quantidades = Object.fromEntries(items.map((item) => [item.sku, item.quantity]));
+  const quantidades = unidadesPorProduto(items);
 
   // Esquerda: o que está sendo vendido (busca, catálogo ou carrinho). Direita: o fechamento, na ordem
   // do atendimento (cliente, pontos, pagamento) e o resumo colado no botão de finalizar.
@@ -70,7 +80,7 @@ function Pdv() {
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_360px] gap-4 max-[980px]:grid-cols-1">
         <section className="flex min-h-0 flex-col rounded-2xl border border-line bg-surface shadow-card">
           <div className="border-b border-line p-4 sm:p-5">
-            <ProductSearch products={products} onAdd={carrinho.addProduct} inputRef={searchInputRef} />
+            <ProductSearch products={products} onAdd={adicionar} inputRef={searchInputRef} />
           </div>
 
           {/* O catálogo fica sempre à vista para somar vários produtos; o carrinho encosta embaixo dele. */}
@@ -80,7 +90,7 @@ function Pdv() {
           </div>
 
           <div className="min-h-[180px] flex-1 overflow-auto px-5 pb-4">
-            <ProductGrid products={products} quantidades={quantidades} onAdd={carrinho.addProduct} />
+            <ProductGrid products={products} quantidades={quantidades} onAdd={adicionar} />
           </div>
 
           <div className="flex max-h-[40%] min-h-0 flex-none flex-col rounded-b-2xl border-t border-line bg-bg max-[980px]:max-h-none">
@@ -94,8 +104,8 @@ function Pdv() {
               {hasItems ? (
                 <Cart
                   items={items}
-                  selectedSku={selectedSku}
-                  onSelect={setSelectedSku}
+                  selectedKey={selectedKey}
+                  onSelect={setSelectedKey}
                   onChangeQuantity={carrinho.changeQuantity}
                   onRemove={carrinho.removeItem}
                 />
@@ -152,6 +162,16 @@ function Pdv() {
       </div>
 
       {lastSale && <SaleDoneModal sale={lastSale} onClose={startNewSale} />}
+      {escolhendoNumero && (
+        <SeletorNumeracao
+          product={escolhendoNumero}
+          onClose={() => setEscolhendoNumero(null)}
+          onPick={(size) => {
+            carrinho.addProduct(escolhendoNumero, size);
+            setEscolhendoNumero(null);
+          }}
+        />
+      )}
     </div>
   );
 }

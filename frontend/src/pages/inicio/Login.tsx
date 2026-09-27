@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { errorMessage, signIn } from "../../services/api";
 import { formatCpf } from "../../utils/cpf";
+import { FUNDO_SECRETO } from "./fotos";
 import { Campo, linkRodape, TelaAcesso } from "./TelaAcesso";
 
 // Entrada do cliente na área dele: CPF + senha (sessão do Django). Sem e-mail.
@@ -15,8 +16,9 @@ export default function Login() {
     setEnviando(true);
     setErro("");
     try {
-      await signIn(cpf, String(dados.get("senha") ?? ""));
-      navigate("/loja");
+      // O painel que o login devolve vai junto: a área do cliente abre com ele, sem buscar de novo antes.
+      const conta = await signIn(cpf, String(dados.get("senha") ?? ""));
+      navigate("/loja", { state: { conta } });
     } catch (e) {
       setErro(errorMessage(e));
       setEnviando(false);
@@ -29,6 +31,7 @@ export default function Login() {
       subtitulo="Entre com seu CPF e senha para ver seus pontos e comprar."
       botao="Entrar"
       onSubmit={entrar}
+      fundoSecreto={FUNDO_SECRETO}
       erro={erro}
       enviando={enviando}
       rodape={

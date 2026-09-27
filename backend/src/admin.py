@@ -3,7 +3,7 @@ from django.contrib import admin
 
 from . import cpf as cpf_utils
 from . import services
-from .models import Avaliacao, Caixa, Cliente, Compra, ItemCompra, Loja, MovimentoPontos, Produto
+from .models import Avaliacao, Caixa, Cliente, Compra, EstoqueNumeracao, ItemCompra, Loja, MovimentoPontos, Produto
 
 
 @admin.register(Loja)
@@ -17,11 +17,19 @@ class CaixaAdmin(admin.ModelAdmin):
     list_filter = ("loja",)
 
 
+# Grade de numerações do calçado, editável dentro do produto (o mesmo que a tela Estoque faz).
+class EstoqueNumeracaoInline(admin.TabularInline):
+    model = EstoqueNumeracao
+    fields = ("numeracao", "quantidade")
+    extra = 0
+
+
 @admin.register(Produto)
 class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ("nome", "sku", "preco", "estoque", "estoque_minimo", "ativo", "tem_foto")
-    list_filter = ("ativo",)
+    list_display = ("nome", "sku", "preco", "usa_numeracao", "estoque", "estoque_minimo", "ativo", "tem_foto")
+    list_filter = ("ativo", "usa_numeracao")
     search_fields = ("nome", "sku")
+    inlines = [EstoqueNumeracaoInline]
 
     @admin.display(description="Foto", boolean=True)
     def tem_foto(self, obj):
@@ -73,7 +81,7 @@ class SomenteLeitura(admin.ModelAdmin):
 
 class ItemCompraInline(admin.TabularInline):
     model = ItemCompra
-    fields = ("produto", "quantidade", "preco_unitario")
+    fields = ("produto", "numeracao", "quantidade", "preco_unitario")
     readonly_fields = fields
     extra = 0
     can_delete = False

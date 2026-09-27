@@ -145,7 +145,10 @@ class ConsultasTest(TestCase):
         dados = self.client.get(f"/api/vendas/{self.venda_ana.id}/").json()
         self.assertEqual(dados["cliente"]["nome"], "Ana Prata")
         self.assertEqual(dados["itens"], [
-            {"sku": "1", "nome": "Tênis Runner", "quantidade": 2, "preco_unitario": 500.0, "subtotal": 1000.0}
+            {
+                "sku": "1", "nome": "Tênis Runner", "quantidade": 2, "numeracao": None,
+                "preco_unitario": 500.0, "subtotal": 1000.0,
+            }
         ])
         self.assertEqual(dados["pontos_ganhos"], 1000)
 

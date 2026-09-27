@@ -1,8 +1,14 @@
 import { REGISTER_CODE } from "../../config";
-import type { Sale, SaleDetail, SaleList } from "../../types";
+import type { CartItem, Sale, SaleDetail, SaleList } from "../../types";
 import { queryString, request } from "./http";
 
 // ---------- Registro de venda no PDV ----------
+
+// Item do carrinho no formato da API (PDV e loja online). `?? null`: vendas guardadas na fila offline antes
+// do estoque por numeração não têm `size`.
+export function itemParaApi(item: CartItem) {
+  return { sku: item.sku, quantidade: item.quantity, numeracao: item.size ?? null };
+}
 
 export async function sendSale(sale: Sale) {
   const data = await request<{ valor_pago: number; desconto: number; pontos_ganhos: number; saldo_atual: number | null }>(
@@ -13,7 +19,7 @@ export async function sendSale(sale: Sale) {
         id: sale.id,
         caixa: REGISTER_CODE,
         cpf: sale.cpf,
-        itens: sale.items.map((item) => ({ sku: item.sku, quantidade: item.quantity })),
+        itens: sale.items.map(itemParaApi),
         forma_pagamento: sale.payment,
         pontos_resgate: sale.pointsToRedeem,
         data: sale.date,
@@ -95,7 +101,7 @@ export async function fetchSales({ start, end, register, payment, page }: SaleQu
 export type ApiSaleDetail = ApiSaleBase & {
   loja: string;
   nivel_na_compra_nome: string;
-  itens: { sku: string; nome: string; quantidade: number; preco_unitario: number; subtotal: number }[];
+  itens: { sku: string; nome: string; quantidade: number; numeracao: number | null; preco_unitario: number; subtotal: number }[];
 };
 
 export function toSaleDetail(d: ApiSaleDetail): SaleDetail {
@@ -107,6 +113,7 @@ export function toSaleDetail(d: ApiSaleDetail): SaleDetail {
       name: i.nome,
       sku: i.sku,
       quantity: i.quantidade,
+      size: i.numeracao,
       unitPrice: i.preco_unitario,
       subtotal: i.subtotal,
     })),

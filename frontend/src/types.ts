@@ -1,11 +1,38 @@
 // Formatos que as telas usam depois da conversão feita em services/api/.
 
-export type Product = {
+// Situação do estoque, pronta do backend (regras.situacao_do_estoque / situacao_da_grade).
+export type StockStatus = "ESGOTADO" | "ACABANDO" | "OK";
+
+// Estoque de uma numeração do calçado.
+export type SizeStock = { size: number; quantity: number; status: StockStatus };
+
+// Produto como aparece nas listas (compre de novo, avaliações): o básico para mostrar.
+export type ProductBase = {
   sku: string;
   name: string;
   price: number;
   // Endereço da foto; null quando o produto não tem (a loja mostra o ícone da categoria).
   photo: string | null;
+};
+
+// Produto do catálogo (PDV e loja online): o básico mais o estoque e a nota das avaliações.
+export type Product = ProductBase & {
+  // Calçado: o estoque e a venda são por numeração (`sizes`); acessório tem só `stock`.
+  usesSizes: boolean;
+  // Total em estoque (no calçado, a soma das numerações).
+  stock: number;
+  stockStatus: StockStatus;
+  sizes: SizeStock[];
+  // Nota média das avaliações dos clientes (null sem avaliação) e quantas são.
+  rating: number | null;
+  reviewCount: number;
+};
+
+// Página do produto na loja online.
+export type ProductDetail = Product & {
+  description: string;
+  byRating: { rating: number; count: number }[];
+  comments: { id: number; date: string; name: string; rating: number; comment: string }[];
 };
 
 export type Client = {
@@ -18,9 +45,12 @@ export type Client = {
   redeemableValue: number;
 };
 
+// Item de carrinho (PDV e loja online). O mesmo produto em duas numerações são dois itens.
 export type CartItem = {
   sku: string;
   quantity: number;
+  // Numeração do calçado; null no acessório.
+  size: number | null;
 };
 
 // Item do carrinho já com o produto (nome e preço) para mostrar na tela.
@@ -211,7 +241,7 @@ export type SaleList = Page & {
 export type SaleDetail = Omit<SaleListItem, "itemCount"> & {
   store: string;
   levelAtPurchase: string;
-  items: { sku: string; name: string; quantity: number; unitPrice: number; subtotal: number }[];
+  items: { sku: string; name: string; quantity: number; size: number | null; unitPrice: number; subtotal: number }[];
 };
 
 // Área do cliente: o perfil + o que o próprio cliente quer ver no painel dele.
@@ -221,7 +251,7 @@ export type ClientDashboard = ClientProfile & {
   levelProgress: number;
   expiring: { days: number; points: number; nextDate: string | null };
   savings: number;
-  topProducts: (Product & { units: number })[];
+  topProducts: (ProductBase & { units: number })[];
 };
 
 // O que o cliente altera no perfil (os outros dados vêm do cadastro da loja).
@@ -274,11 +304,20 @@ export type StoreReviews = {
   reviews: StoreReview[];
 };
 
-// Estoque (tela Estoque do gerente). A situação vem pronta do backend (regras.situacao_do_estoque).
-export type StockStatus = "ESGOTADO" | "ACABANDO" | "OK";
-export type StockItem = { sku: string; name: string; quantity: number; minimum: number; status: StockStatus; sold: number };
+// Estoque (tela Estoque do gerente). A situação vem pronta do backend. No calçado, `quantity` é a soma da
+// grade (`sizes`) e `minimum` vale para cada numeração.
+export type StockItem = {
+  sku: string;
+  name: string;
+  usesSizes: boolean;
+  quantity: number;
+  minimum: number;
+  status: StockStatus;
+  sold: number;
+  sizes: SizeStock[];
+};
 export type Stock = {
-  summary: { products: number; units: number; outOfStock: number; runningLow: number };
+  summary: { products: number; units: number; outOfStock: number; runningLow: number; sizesOut: number };
   soldDays: number;
   items: StockItem[];
 };

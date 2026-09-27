@@ -439,7 +439,9 @@
   }
 }
 
-:root[data-theme="light"] .landing-acesso {
+/* .landing-branca: a moldura de fundo secreto (/login, /cadastro) é sempre clara, em qualquer tema. */
+:root[data-theme="light"] .landing-acesso,
+.landing-acesso.landing-branca {
   --l-fundo: #fafafa;
   --l-fundo-2: #ffffff;
   --l-linha: #e2e2e5;

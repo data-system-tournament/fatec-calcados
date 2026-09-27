@@ -2,9 +2,11 @@ import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { BotaoTema } from "./BotaoTema";
+import InkReveal from "../../components/ui/InkReveal";
 
-// Moldura comum de /login e /cadastro: cartão dividido, painel da marca à esquerda e formulário
-// à direita. Base da paleta da landing (classe .landing), mas clara ou escura conforme o tema (.landing-acesso).
+// Moldura comum de /login, /cadastro e /admin/entrar: cartão dividido, painel da marca à esquerda e formulário
+// à direita, ou (com `fundoSecreto`, em /login e /cadastro) só o cartão sobre uma foto escondida que o ponteiro revela.
+// Base da paleta da landing (classe .landing), mas clara ou escura conforme o tema (.landing-acesso).
 
 type TelaAcessoProps = {
   titulo: string;
@@ -16,20 +18,62 @@ type TelaAcessoProps = {
   enviando?: boolean;
   rodape: ReactNode;
   children: ReactNode;
+  // URL de uma foto para a moldura mínima com fundo secreto; sem ela, a moldura dividida.
+  fundoSecreto?: string;
 };
 
-export function TelaAcesso({ titulo, subtitulo, botao, onSubmit, erro, enviando = false, rodape, children }: TelaAcessoProps) {
+type ConteudoProps = Omit<TelaAcessoProps, "fundoSecreto">;
+
+export function TelaAcesso({ fundoSecreto, ...props }: TelaAcessoProps) {
+  return fundoSecreto ? <TelaComFundoSecreto foto={fundoSecreto} {...props} /> : <TelaDividida {...props} />;
+}
+
+// Título, formulário e rodapé: o mesmo miolo nas duas molduras.
+function Formulario({ titulo, subtitulo, botao, onSubmit, erro, enviando = false, rodape, children }: ConteudoProps) {
   function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!enviando) onSubmit(new FormData(e.currentTarget));
   }
 
   return (
+    <div className="w-full">
+      <h1 className="text-[2rem] leading-[1.1] font-semibold tracking-[-.03em]">{titulo}</h1>
+      <p className="mt-2 text-[15px] text-(--l-texto-2)">{subtitulo}</p>
+
+      <form noValidate onSubmit={enviar} className="mt-9 flex flex-col gap-5">
+        {children}
+        {erro && (
+          <p role="alert" className="rounded-xl border border-(--l-linha) bg-(--l-fundo) px-4 py-3 text-[14px]">
+            {erro}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={enviando}
+          className="mt-2 rounded-xl bg-(--l-texto) py-3.5 text-[15px] font-medium text-(--l-fundo) transition-opacity hover:opacity-90 disabled:opacity-60"
+        >
+          {enviando ? "Aguarde..." : botao}
+        </button>
+      </form>
+
+      <p className="mt-7 text-[14px] text-(--l-texto-2)">{rodape}</p>
+    </div>
+  );
+}
+
+function Voltar() {
+  return (
+    <Link to="/" className="inline-flex items-center gap-2 text-[14px] text-(--l-texto-2) transition-colors hover:text-(--l-texto)">
+      <ArrowLeft size={16} aria-hidden /> Voltar
+    </Link>
+  );
+}
+
+function TelaDividida(props: ConteudoProps) {
+  return (
     <div className="landing landing-acesso flex min-h-svh flex-col px-4 sm:px-8">
       <header className="flex h-20 items-center justify-between">
-        <Link to="/" className="inline-flex items-center gap-2 text-[14px] text-(--l-texto-2) transition-colors hover:text-(--l-texto)">
-          <ArrowLeft size={16} aria-hidden /> Voltar
-        </Link>
+        <Voltar />
         <BotaoTema />
       </header>
 
@@ -38,28 +82,7 @@ export function TelaAcesso({ titulo, subtitulo, botao, onSubmit, erro, enviando 
           <PainelMarca />
 
           <div className="flex items-center px-6 py-12 sm:px-14">
-            <div className="w-full">
-              <h1 className="text-[2rem] leading-[1.1] font-semibold tracking-[-.03em]">{titulo}</h1>
-              <p className="mt-2 text-[15px] text-(--l-texto-2)">{subtitulo}</p>
-
-              <form noValidate onSubmit={enviar} className="mt-9 flex flex-col gap-5">
-                {children}
-                {erro && (
-                  <p role="alert" className="rounded-xl border border-(--l-linha) bg-(--l-fundo) px-4 py-3 text-[14px]">
-                    {erro}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  disabled={enviando}
-                  className="mt-2 rounded-xl bg-(--l-texto) py-3.5 text-[15px] font-medium text-(--l-fundo) transition-opacity hover:opacity-90 disabled:opacity-60"
-                >
-                  {enviando ? "Aguarde..." : botao}
-                </button>
-              </form>
-
-              <p className="mt-7 text-[14px] text-(--l-texto-2)">{rodape}</p>
-            </div>
+            <Formulario {...props} />
           </div>
         </div>
       </main>
@@ -67,6 +90,46 @@ export function TelaAcesso({ titulo, subtitulo, botao, onSubmit, erro, enviando 
       <footer className="flex h-16 items-center justify-end text-[13px] text-(--l-texto-2)">
         © 2026 FATECalçados · Desafio de Inovação Data System
       </footer>
+    </div>
+  );
+}
+
+// O --l-fundo claro (#fafafa) em RGB, fora do componente para não virar um array novo a cada render.
+const FUNDO_CLARO: [number, number, number] = [250, 250, 250];
+
+// Feito com IA: moldura mínima de /login e /cadastro. A tela fica branca e vazia (sempre clara, por isso sem
+// o botão de tema: .landing-branca) e o ponteiro (ou o dedo) revela por onde passa uma foto de tênis escondida
+// embaixo: a foto cobre a tela toda (object-cover, ancorada embaixo, onde estão os tênis) e o InkReveal a tapa
+// com um canvas da cor do fundo (#fafafa, o --l-fundo claro). As camadas por cima são pointer-events-none, fora
+// os controles, para o canvas continuar recebendo o movimento em volta do cartão.
+function TelaComFundoSecreto({ foto, ...props }: ConteudoProps & { foto: string }) {
+  return (
+    <div className="landing landing-acesso landing-branca relative min-h-svh overflow-hidden">
+      <div className="absolute inset-0 isolate">
+        <img src={foto} alt="" className="absolute inset-0 size-full object-cover object-[50%_85%]" />
+        <InkReveal maskColor={FUNDO_CLARO} brushSize={150} lifetime={900} />
+      </div>
+
+      <div className="pointer-events-none relative flex min-h-svh flex-col px-4 sm:px-8">
+        <header className="flex h-20 items-center">
+          <span className="pointer-events-auto rounded-full bg-(--l-fundo-2)/85 px-4 py-2 backdrop-blur">
+            <Voltar />
+          </span>
+        </header>
+
+        <main className="flex flex-1 items-center justify-center py-6">
+          <div className="pointer-events-auto w-full max-w-[420px] rounded-3xl border border-(--l-linha) bg-(--l-fundo-2)/90 px-6 py-10 shadow-(--l-sombra) backdrop-blur-md sm:px-10">
+            <img src="/fatec-icon.svg" alt="FATECalçados" className="mb-8 h-8 w-auto" />
+            <Formulario {...props} />
+          </div>
+        </main>
+
+        <div className="flex h-16 items-center justify-center">
+          <p className="rounded-full bg-(--l-fundo-2)/85 px-4 py-1.5 text-center text-[13px] text-(--l-texto-2) backdrop-blur">
+            Passe o mouse (ou o dedo) pelo fundo: tem tênis escondido aí.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import type { ClientDashboard, OnlinePurchase, OnlinePurchaseResult, ProfileUpdate, Reviews, SaleDetail } from "../../types";
 import { toClientProfile, type ApiClientProfile } from "./clientes";
 import { ApiError, ensureCsrfCookie, request } from "./http";
-import { toSaleDetail, type ApiSaleDetail } from "./vendas";
+import { itemParaApi, toSaleDetail, type ApiSaleDetail } from "./vendas";
 
 // Área do cliente (/api/conta/, com sessão).
 
@@ -86,7 +86,7 @@ export async function buyOnline(purchase: OnlinePurchase): Promise<OnlinePurchas
     method: "POST",
     body: {
       id: purchase.id,
-      itens: purchase.items.map((item) => ({ sku: item.sku, quantidade: item.quantity })),
+      itens: purchase.items.map(itemParaApi),
       forma_pagamento: purchase.payment,
       pontos_resgate: purchase.pointsToRedeem,
     },

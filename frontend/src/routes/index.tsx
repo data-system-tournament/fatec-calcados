@@ -9,6 +9,7 @@ import Clientes from "../pages/clientes/Clientes";
 import Avaliacoes from "../pages/conta/Avaliacoes";
 import Checkout from "../pages/conta/Checkout";
 import Loja from "../pages/conta/Loja";
+import Produto from "../pages/conta/Produto";
 import MinhaConta from "../pages/conta/MinhaConta";
 import MinhasCompras from "../pages/conta/MinhasCompras";
 import Dashboard from "../pages/dashboard/Dashboard";
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "loja", element: <Loja /> },
       { path: "loja/carrinho", element: <Checkout /> },
+      { path: "loja/produto/:sku", element: <Produto /> },
       { path: "minha-conta", element: <MinhaConta /> },
       { path: "minha-conta/compras", element: <MinhasCompras /> },
       { path: "minha-conta/avaliacoes", element: <Avaliacoes /> },

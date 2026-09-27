@@ -26,6 +26,8 @@ docker compose exec backend python manage.py createsuperuser    # login do /admi
 
 Testes: `docker compose exec backend python manage.py test`
 
+Todos os comandos (criar gerente e cliente, dados de exemplo, testes, problemas comuns): [`docs/comandos.md`](docs/comandos.md).
+
 Depois de instalar uma dependência nova no frontend, basta `docker compose restart frontend`:
 o container percebe que o `package-lock.json` mudou e reinstala sozinho.
 

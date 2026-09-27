@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import { errorMessage, fetchAccount, fetchProducts, signOut as apiSignOut } from "../services/api";
 import type { CartItem, ClientDashboard, Product } from "../types";
+import { mudarQuantidade, somarAoCarrinho, tirarDoCarrinho } from "../utils/carrinho";
 import { ContaContext } from "./conta";
 
 const CART_KEY = "fatec:carrinho-online";
@@ -10,15 +12,25 @@ const CART_KEY = "fatec:carrinho-online";
 function readCart(): CartItem[] {
   try {
     const saved = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
-    return Array.isArray(saved) ? saved : [];
+    // Carrinho salvo antes do estoque por numeração não tem `size`: vira null, e o item de calçado sem número
+    // é tirado quando o catálogo chega (no efeito que busca os produtos).
+    return Array.isArray(saved) ? saved.map((item: CartItem) => ({ ...item, size: item.size ?? null })) : [];
   } catch {
     return [];
   }
 }
 
+// Feito com IA: o login (/login, /cadastro) já devolve o painel e o manda no state da navegação. Com ele, a
+// área abre na hora em vez de esperar o mesmo painel de novo; a busca normal roda do mesmo jeito, por trás,
+// para o painel nunca ficar velho (o state sobrevive a um F5).
+function contaDoLogin(state: unknown): ClientDashboard | null {
+  return (state as { conta?: ClientDashboard } | null)?.conta ?? null;
+}
+
 export function ContaProvider({ children }: { children: ReactNode }) {
-  const [account, setAccount] = useState<ClientDashboard | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { state } = useLocation();
+  const [account, setAccount] = useState<ClientDashboard | null>(() => contaDoLogin(state));
+  const [loading, setLoading] = useState(() => contaDoLogin(state) === null);
   const [error, setError] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>(readCart);
@@ -37,7 +49,18 @@ export function ContaProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     load();
-    fetchProducts().then(setProducts).catch(() => setProducts([]));
+    fetchProducts()
+      .then((lista) => {
+        setProducts(lista);
+        // Com o catálogo, dá para saber quais itens são calçado: o que ficou sem numeração (carrinho salvo antes
+        // do estoque por numeração) sai, porque não dá para comprá-lo sem escolher o número.
+        const calcados = new Set(lista.filter((p) => p.usesSizes).map((p) => p.sku));
+        setCart((current) => {
+          const validos = current.filter((item) => item.size !== null || !calcados.has(item.sku));
+          return validos.length === current.length ? current : validos;
+        });
+      })
+      .catch(() => setProducts([]));
   }, [load]);
 
   const reload = useCallback(async () => {
@@ -65,22 +88,16 @@ export function ContaProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  function addToCart(product: Product) {
-    setCart((current) =>
-      current.some((item) => item.sku === product.sku)
-        ? current.map((item) => (item.sku === product.sku ? { ...item, quantity: item.quantity + 1 } : item))
-        : [...current, { sku: product.sku, quantity: 1 }],
-    );
+  function addToCart(sku: string, size: number | null, quantity = 1) {
+    setCart((current) => somarAoCarrinho(current, sku, size, quantity));
   }
 
-  function changeQuantity(sku: string, change: number) {
-    setCart((current) =>
-      current.map((item) => (item.sku === sku ? { ...item, quantity: Math.max(1, item.quantity + change) } : item)),
-    );
+  function changeQuantity(chave: string, change: number) {
+    setCart((current) => mudarQuantidade(current, chave, change));
   }
 
-  function removeFromCart(sku: string) {
-    setCart((current) => current.filter((item) => item.sku !== sku));
+  function removeFromCart(chave: string) {
+    setCart((current) => tirarDoCarrinho(current, chave));
   }
 
   return (

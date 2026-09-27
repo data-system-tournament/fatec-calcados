@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import { createElement, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { corDoNivel } from "../../components/ui/corDoNivel";
@@ -60,34 +61,48 @@ export function ProgressoDoNivel({ account }: { account: ClientDashboard }) {
   );
 }
 
-// "Compre de novo": os produtos que o cliente mais compra, com um botão para pôr no carrinho.
+// "Compre de novo": os produtos que o cliente mais compra. O acessório vai direto para o carrinho; o calçado
+// abre a página do produto, porque precisa escolher a numeração (e ver se ela tem em estoque).
 export function CompreDeNovo({ account }: { account: ClientDashboard }) {
-  const { addToCart } = useConta();
+  const { addToCart, products } = useConta();
   const notify = useToast();
   if (account.topProducts.length === 0) return null;
 
   return (
     <ul className="grid grid-cols-3 gap-3 max-[860px]:grid-cols-1">
-      {account.topProducts.map((product) => (
-        <li key={product.sku} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-3">
-          <span className="min-w-0">
-            <span className="block truncate text-[13.5px] font-medium">{product.name}</span>
-            <small className="text-xs text-muted">
-              {formatMoney(product.price)} · comprou {product.units}×
-            </small>
-          </span>
-          <Button
-            size="sm"
-            aria-label={`Adicionar ${product.name} ao carrinho`}
-            onClick={() => {
-              addToCart(product);
-              notify(`${product.name} no carrinho`);
-            }}
-          >
-            <Plus size={14} aria-hidden />
-          </Button>
-        </li>
-      ))}
+      {account.topProducts.map((product) => {
+        const catalogo = products.find((p) => p.sku === product.sku);
+        return (
+          <li key={product.sku} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-3">
+            <Link to={`/loja/produto/${product.sku}`} className="min-w-0 hover:underline">
+              <span className="block truncate text-[13.5px] font-medium">{product.name}</span>
+              <small className="text-xs text-muted">
+                {formatMoney(product.price)} · comprou {product.units}×
+              </small>
+            </Link>
+            {catalogo?.usesSizes ? (
+              <Link
+                to={`/loja/produto/${product.sku}`}
+                className="flex-none rounded-md border border-line-2 px-2.5 py-1 text-[12.5px] font-medium hover:border-ink"
+              >
+                Escolher nº
+              </Link>
+            ) : (
+              <Button
+                size="sm"
+                aria-label={`Adicionar ${product.name} ao carrinho`}
+                disabled={!catalogo || catalogo.stock === 0}
+                onClick={() => {
+                  addToCart(product.sku, null);
+                  notify(`${product.name} no carrinho`);
+                }}
+              >
+                <Plus size={14} aria-hidden />
+              </Button>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }

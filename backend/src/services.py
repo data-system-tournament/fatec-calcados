@@ -7,13 +7,15 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import F, Q, Sum
+from django.db.models import F, Sum
 from django.db.models.functions import Greatest
 from django.utils import timezone
 
 from . import cpf as cpf_utils
 from . import regras
-from .models import Avaliacao, Caixa, Cliente, Compra, FormaPagamento, ItemCompra, Loja, MovimentoPontos, Produto
+from .models import (
+    Avaliacao, Caixa, Cliente, Compra, EstoqueNumeracao, FormaPagamento, ItemCompra, Loja, MovimentoPontos, Produto,
+)
 
 Tipo = MovimentoPontos.Tipo
 
@@ -167,14 +169,8 @@ def registrar_compra(
     return compra
 
 
-def buscar_produtos(texto: str = ""):
-    produtos = Produto.objects.filter(ativo=True)
-    texto = (texto or "").strip()
-    if texto:
-        produtos = produtos.filter(Q(nome__icontains=texto) | Q(sku__startswith=texto))
-    return produtos
-
-
+# Feito com IA: cada item traz sku, quantidade e, no calçado, a numeração (que precisa existir na grade do
+# produto). Devolve (produto, quantidade, numeracao); numeracao é None no acessório.
 def _itens_da_venda(itens):
     if not itens:
         raise RegraViolada("A venda precisa ter pelo menos um item.")
@@ -184,7 +180,8 @@ def _itens_da_venda(itens):
         try:
             sku = str(item["sku"])
             quantidade = int(item["quantidade"])
-        except (KeyError, TypeError, ValueError):
+            numeracao = item.get("numeracao")
+        except (KeyError, TypeError, ValueError, AttributeError):
             raise RegraViolada("Cada item precisa de sku e quantidade.")
         if quantidade < 1:
             raise RegraViolada("A quantidade de cada item precisa ser pelo menos 1.")
@@ -192,15 +189,22 @@ def _itens_da_venda(itens):
         produto = Produto.objects.filter(sku=sku, ativo=True).first()
         if produto is None:
             raise RegraViolada(f"Produto {sku} não encontrado.")
-        linhas.append((produto, quantidade))
+        problema = regras.problema_da_numeracao(produto.usa_numeracao, numeracao)
+        if problema:
+            raise RegraViolada(f"{produto.nome}: {problema}")
+        if numeracao is not None and not produto.numeracoes.filter(numeracao=numeracao).exists():
+            raise RegraViolada(f"{produto.nome}: não trabalhamos com a numeração {numeracao}.")
+        linhas.append((produto, quantidade, numeracao))
     return linhas
 
 
-# Feito com IA: venda do caixa. O preço vem do banco (o caixa manda só sku e quantidade).
+# Feito com IA: venda do caixa. O preço vem do banco (o caixa manda só sku, quantidade e numeração).
 # Se o mesmo `id` chegar de novo (venda offline reenviada), devolve a venda existente sem duplicar.
+# `conferir_estoque` só vem ligado da loja online (ver comprar_online); o caixa nunca recusa por estoque.
 @transaction.atomic
 def registrar_venda(
     caixa: Caixa, itens, forma_pagamento: str, cpf=None, pontos_resgate: int = 0, data=None, id=None,
+    conferir_estoque=False,
 ):
     if id is not None:
         try:
@@ -215,7 +219,9 @@ def registrar_venda(
         raise RegraViolada("Forma de pagamento inválida.")
 
     linhas = _itens_da_venda(itens)
-    valor_bruto = sum(produto.preco * quantidade for produto, quantidade in linhas)
+    if conferir_estoque:
+        _conferir_estoque(linhas)
+    valor_bruto = sum(produto.preco * quantidade for produto, quantidade, _n in linhas)
 
     if cpf:
         compra = registrar_compra(
@@ -236,30 +242,66 @@ def registrar_venda(
         )
 
     ItemCompra.objects.bulk_create([
-        ItemCompra(compra=compra, produto=produto, quantidade=quantidade, preco_unitario=produto.preco)
-        for produto, quantidade in linhas
+        ItemCompra(compra=compra, produto=produto, quantidade=quantidade, preco_unitario=produto.preco, numeracao=numeracao)
+        for produto, quantidade, numeracao in linhas
     ])
     _baixar_estoque(linhas)
     return compra, True
 
 
-# Feito com IA: a venda tira do estoque, mas nunca é recusada por falta dele: no caixa o produto já está
+# Feito com IA: na loja online não há produto na mão do cliente, então só vende o que tem. Soma o pedido por
+# produto e numeração (o mesmo número pode vir em duas linhas) e trava as linhas de estoque até o fim da venda,
+# para duas compras ao mesmo tempo não levarem o último par.
+def _conferir_estoque(linhas):
+    pedido = {}
+    for produto, quantidade, numeracao in linhas:
+        pedido[(produto, numeracao)] = pedido.get((produto, numeracao), 0) + quantidade
+    for (produto, numeracao), quantidade in pedido.items():
+        if numeracao is None:
+            disponivel = Produto.objects.select_for_update().get(pk=produto.pk).estoque
+            rotulo = produto.nome
+        else:
+            disponivel = EstoqueNumeracao.objects.select_for_update().get(produto=produto, numeracao=numeracao).quantidade
+            rotulo = f"{produto.nome} nº {numeracao}"
+        if quantidade > disponivel:
+            if disponivel == 0:
+                raise RegraViolada(f"{rotulo} esgotou. Tire do carrinho ou escolha outra numeração.")
+            raise RegraViolada(f"Só temos {disponivel} de {rotulo}. Diminua a quantidade no carrinho.")
+
+
+# Feito com IA: a venda tira do estoque, mas nunca é recusada por falta dele no caixa: lá o produto já está
 # na mão do cliente (e a venda offline chega depois), então um estoque zerado só quer dizer que a contagem
-# está errada. Greatest segura em zero; o F() subtrai no banco, sem perder vendas simultâneas.
+# está errada. Greatest segura em zero; o F() subtrai no banco, sem perder vendas simultâneas. O calçado
+# desconta da numeração vendida; o acessório, do número único do produto.
 def _baixar_estoque(linhas):
-    for produto, quantidade in linhas:
-        Produto.objects.filter(pk=produto.pk).update(estoque=Greatest(F("estoque") - quantidade, 0))
+    for produto, quantidade, numeracao in linhas:
+        if numeracao is None:
+            Produto.objects.filter(pk=produto.pk).update(estoque=Greatest(F("estoque") - quantidade, 0))
+        else:
+            EstoqueNumeracao.objects.filter(produto=produto, numeracao=numeracao).update(
+                quantidade=Greatest(F("quantidade") - quantidade, 0)
+            )
 
 
-# Contagem feita pelo gerente (tela Estoque): grava a quantidade que está na prateleira e o mínimo.
-def ajustar_estoque(sku, quantidade, minimo) -> Produto:
+# Feito com IA: contagem feita pelo gerente (tela Estoque). Grava a quantidade que está na prateleira e o
+# mínimo. No calçado, a contagem é de uma numeração (que entra na grade se ainda não estava) e o mínimo vale
+# para cada numeração do produto.
+@transaction.atomic
+def ajustar_estoque(sku, quantidade, minimo, numeracao=None) -> Produto:
     produto = Produto.objects.filter(sku=str(sku or "").strip()).first()
     if produto is None:
         raise RegraViolada("Produto não encontrado.")
-    problema = regras.problema_do_estoque(quantidade, minimo)
+    problema = regras.problema_do_estoque(quantidade, minimo) or regras.problema_da_numeracao(
+        produto.usa_numeracao, numeracao
+    )
     if problema:
         raise RegraViolada(problema)
-    produto.estoque = quantidade
+    if produto.usa_numeracao:
+        EstoqueNumeracao.objects.update_or_create(
+            produto=produto, numeracao=numeracao, defaults={"quantidade": quantidade}
+        )
+    else:
+        produto.estoque = quantidade
     produto.estoque_minimo = minimo
     produto.save(update_fields=["estoque", "estoque_minimo"])
     return produto
@@ -332,10 +374,13 @@ def autenticar_cliente(request, cpf, senha) -> Cliente:
 
 # Feito com IA: compra feita pelo próprio cliente. O CPF vem do cliente da sessão (nunca do corpo da
 # requisição) e a venda passa pelo mesmo registrar_venda do PDV: mesmas regras de preço, pontos e resgate.
+# A diferença é o estoque: a loja online só vende o que tem (conferir_estoque).
 def comprar_online(cliente: Cliente, itens, forma_pagamento: str, pontos_resgate: int = 0, id=None):
     if forma_pagamento not in PAGAMENTOS_ONLINE:
         raise RegraViolada("Na loja online o pagamento é por Pix ou cartão de crédito.")
-    return registrar_venda(caixa_online(), itens, forma_pagamento, cliente.cpf, pontos_resgate, id=id)
+    return registrar_venda(
+        caixa_online(), itens, forma_pagamento, cliente.cpf, pontos_resgate, id=id, conferir_estoque=True
+    )
 
 
 # Feito com IA: troca de senha na "Minha conta". Pede a senha atual (quem pegou o computador logado

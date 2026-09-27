@@ -16,8 +16,9 @@ class ContaTest(TestCase):
     def setUp(self):
         self.loja = Loja.objects.create(nome="Loja Centro", cidade="Araras")
         self.caixa = Caixa.objects.create(codigo="centro-01", nome="Caixa 01", loja=self.loja)
-        Produto.objects.create(sku="7890001", nome="Tênis Runner", preco=Decimal("289.90"))
-        Produto.objects.create(sku="7890002", nome="Meia Esportiva", preco=Decimal("19.90"))
+        # A loja online só vende o que tem em estoque (a numeração tem teste próprio em test_estoque).
+        Produto.objects.create(sku="7890001", nome="Tênis Runner", preco=Decimal("289.90"), estoque=50)
+        Produto.objects.create(sku="7890002", nome="Meia Esportiva", preco=Decimal("19.90"), estoque=50)
         self.mariana = services.cadastrar_cliente("52998224725", "Mariana Souza", self.loja)
 
     def post(self, url, dados, client=None):

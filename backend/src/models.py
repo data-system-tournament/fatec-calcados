@@ -49,10 +49,17 @@ class Produto(models.Model):
     preco = models.DecimalField("preço", max_digits=10, decimal_places=2)
     ativo = models.BooleanField(default=True, help_text="Produtos inativos não aparecem no caixa")
     foto = models.URLField(blank=True, help_text="Endereço da foto do produto. Vazio = a loja mostra o ícone da categoria")
+    descricao = models.TextField("descrição", blank=True, help_text="Texto da aba Descrição na página do produto")
     # Cada venda tira do estoque (services.registrar_venda); o gerente acerta a contagem na tela Estoque.
-    estoque = models.PositiveIntegerField(default=0)
+    # Calçado (usa_numeracao) guarda o estoque por numeração em EstoqueNumeracao; `estoque` só vale para
+    # acessório, que não tem número.
+    usa_numeracao = models.BooleanField(
+        "usa numeração", default=False, help_text="Calçado: o estoque e a venda são por numeração"
+    )
+    estoque = models.PositiveIntegerField(default=0, help_text="Só para produto sem numeração")
     estoque_minimo = models.PositiveIntegerField(
-        "estoque mínimo", default=regras.ESTOQUE_MINIMO_PADRAO, help_text="No mínimo ou abaixo, o produto está acabando"
+        "estoque mínimo", default=regras.ESTOQUE_MINIMO_PADRAO,
+        help_text="No mínimo ou abaixo, o produto está acabando. No calçado, vale para cada numeração",
     )
 
     class Meta:
@@ -60,6 +67,23 @@ class Produto(models.Model):
 
     def __str__(self):
         return f"{self.nome} ({self.sku})"
+
+
+# Feito com IA: estoque de um calçado numa numeração. As numerações que existem para o produto são as linhas
+# daqui (a grade do produto); a venda desconta da linha do número vendido.
+class EstoqueNumeracao(models.Model):
+    produto = models.ForeignKey(Produto, on_delete=models.CASCADE, related_name="numeracoes")
+    numeracao = models.PositiveSmallIntegerField("numeração")
+    quantidade = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["produto", "numeracao"]
+        verbose_name = "estoque por numeração"
+        verbose_name_plural = "estoque por numeração"
+        constraints = [models.UniqueConstraint(fields=["produto", "numeracao"], name="numeracao_unica_por_produto")]
+
+    def __str__(self):
+        return f"{self.produto.nome} nº {self.numeracao}: {self.quantidade}"
 
 
 class Cliente(models.Model):
@@ -119,9 +143,12 @@ class ItemCompra(models.Model):
     produto = models.ForeignKey(Produto, on_delete=models.PROTECT, related_name="itens_vendidos")
     quantidade = models.PositiveIntegerField()
     preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    # Número do calçado vendido; vazio em acessório (e nas vendas de antes do estoque por numeração).
+    numeracao = models.PositiveSmallIntegerField("numeração", null=True, blank=True)
 
     def __str__(self):
-        return f"{self.quantidade}x {self.produto.nome}"
+        numero = f" nº {self.numeracao}" if self.numeracao else ""
+        return f"{self.quantidade}x {self.produto.nome}{numero}"
 
 
 # Feito com IA: livro-razão de pontos. Não existe campo "saldo": o saldo é a soma dos movimentos.

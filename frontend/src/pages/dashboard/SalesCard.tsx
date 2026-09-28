@@ -8,7 +8,6 @@ import CardHeading from "./CardHeading";
 import { TONS } from "./tons";
 
 // Vendas do período (todas, com e sem CPF): totais, ticket médio e a quebra por forma de pagamento.
-// A quebra por caixa é longa (um caixa por loja), então fica em SalesByRegisterCard, em largura total.
 function SalesCard({ sales }: { sales: SalesSummary }) {
   return (
     <Card className="p-[18px]">

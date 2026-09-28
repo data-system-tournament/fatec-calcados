@@ -2,7 +2,7 @@ import { ArrowRight, Layers, Plus, Star, ShieldCheck, ShoppingBag, Ticket, Trend
 import { Link } from "react-router-dom";
 import fotoLoja from "../../assets/loja/hero.jpg";
 import { useProgressoScroll } from "../../hooks/useProgressoScroll";
-import { container, titulo } from "./estilos";
+import { container, telaCheia, titulo } from "./estilos";
 import { GALERIA, foto } from "./fotos";
 import VitrineTenis from "./VitrineTenis";
 
@@ -42,7 +42,7 @@ export default function Landing() {
         <Manifesto />
         <Galeria />
 
-        <section id="niveis" className="bg-(--l-cinza) py-28 text-(--l-ink) sm:py-40">
+        <section id="niveis" className={`${telaCheia} bg-(--l-cinza) py-28 text-(--l-ink) sm:py-40`}>
           <div className={container}>
             <h2 className={`${titulo} max-w-[14ch]`}>Quanto mais você compra, mais rende.</h2>
             <ul className="mt-20">
@@ -229,6 +229,7 @@ function Manifesto() {
 // Feito com IA: faixa de fotos que corre devagar da direita para a esquerda. A lista aparece duas vezes
 // (a segunda escondida dos leitores de tela) e a animação anda metade da largura, então o loop não tem
 // emenda. Para no hover e, com movimento reduzido, fica parada e rola com o mouse ou o teclado.
+// A altura das fotos acompanha a da tela (svh), para a seção ficar cheia como a vitrine do topo.
 function Galeria() {
   const fotos = (copia: boolean) =>
     GALERIA.map((g, i) => (
@@ -237,13 +238,13 @@ function Galeria() {
           src={foto(g.id, 640)}
           alt={copia ? "" : g.alt}
           loading="lazy"
-          className="h-[clamp(260px,32vw,420px)] w-auto max-w-none rounded-2xl object-cover [aspect-ratio:3/4]"
+          className="h-[clamp(260px,min(46vw,56svh),640px)] w-auto max-w-none rounded-2xl object-cover [aspect-ratio:3/4]"
         />
       </li>
     ));
 
   return (
-    <section className="bg-(--l-black) py-28 sm:py-40">
+    <section className={`${telaCheia} bg-(--l-black) py-20`}>
       <div className={`${container} flex flex-wrap items-end justify-between gap-6`}>
         <h2 className={`${titulo} max-w-[12ch]`}>Da quadra à calçada.</h2>
         <p className="max-w-[36ch] text-(--l-text-dark)">
@@ -305,7 +306,7 @@ const AVALIACOES = [
 
 function Avaliacoes() {
   return (
-    <section className="bg-(--l-osso) py-28 text-(--l-ink) sm:py-40">
+    <section className={`${telaCheia} bg-(--l-osso) py-28 text-(--l-ink) sm:py-40`}>
       <div className={container}>
         <div className="flex flex-wrap items-end justify-between gap-6">
           <h2 className={`${titulo} max-w-[13ch]`}>Quem compra, volta.</h2>
@@ -348,19 +349,21 @@ const PERGUNTAS = [
   ["Os pontos contam sobre o valor com desconto?", "Sim. Os pontos são calculados sobre o valor que você pagou, já com o desconto, sem os centavos."],
 ];
 
+// O respiro de cada pergunta e o tamanho do texto crescem com a altura da tela (svh), para a lista
+// preencher a seção como a vitrine do topo em vez de ficar pequena no meio.
 function Perguntas() {
   return (
-    <section className="bg-(--l-black) py-28 sm:py-40">
+    <section className={`${telaCheia} bg-(--l-black) py-20`}>
       <div className={`${container} grid gap-14 lg:grid-cols-[5fr_7fr]`}>
         <h2 className={`${titulo} max-w-[10ch]`}>Perguntas frequentes.</h2>
         <div className="border-b border-(--l-line-dark)">
           {PERGUNTAS.map(([pergunta, resposta]) => (
             <details key={pergunta} className="group border-t border-(--l-line-dark)">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-6 text-[18px] font-medium tracking-[-.01em] transition-colors hover:text-(--l-vinho-claro) [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-[clamp(1.5rem,4svh,3rem)] text-[clamp(18px,2.6svh,26px)] font-medium tracking-[-.01em] transition-colors hover:text-(--l-vinho-claro) [&::-webkit-details-marker]:hidden">
                 {pergunta}
                 <Plus size={20} aria-hidden className="flex-none text-(--l-text-dark) transition-transform duration-300 group-open:rotate-45" />
               </summary>
-              <p className="max-w-[60ch] pb-6 text-(--l-text-dark)">{resposta}</p>
+              <p className="-mt-[clamp(.5rem,2svh,1.5rem)] max-w-[60ch] pb-[clamp(1.5rem,4svh,3rem)] text-[clamp(15px,2svh,18px)] text-(--l-text-dark)">{resposta}</p>
             </details>
           ))}
         </div>
@@ -373,7 +376,7 @@ function Perguntas() {
 // desktop a foto ocupa a direita e se funde ao fundo osso num degradê; no celular vem embaixo do texto.
 function Chamada() {
   return (
-    <section className="relative overflow-hidden bg-(--l-osso) pt-28 text-(--l-ink) lg:py-48">
+    <section className={`${telaCheia} relative overflow-hidden bg-(--l-osso) pt-28 text-(--l-ink) lg:py-48`}>
       <div
         aria-hidden
         className="absolute inset-y-0 left-[38%] z-[1] hidden w-[18%] bg-[linear-gradient(90deg,var(--l-osso),transparent)] lg:block"

@@ -18,7 +18,6 @@ import PeriodFilter from "./PeriodFilter";
 import PointsLiabilityCard from "./PointsLiabilityCard";
 import Ranking from "./Ranking";
 import RedemptionByLevelCard from "./RedemptionByLevelCard";
-import SalesByRegisterCard from "./SalesByRegisterCard";
 import SalesCard from "./SalesCard";
 import Secao from "./Secao";
 import TopProductsCard from "./TopProductsCard";
@@ -90,7 +89,6 @@ function Dashboard() {
           <SalesCard sales={data.sales} />
           <TopProductsCard products={data.sales.topProducts} />
         </div>
-        <SalesByRegisterCard groups={data.sales.byRegister} />
       </Secao>
 
       <Secao title="Clientes" description="Quem está no programa, em que nível e quem mais pontua." atraso={360}>
